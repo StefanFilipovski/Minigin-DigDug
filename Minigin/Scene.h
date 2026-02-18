@@ -1,6 +1,5 @@
 #pragma once
 #include <memory>
-#include <string>
 #include <vector>
 #include "GameObject.h"
 
@@ -13,7 +12,8 @@ namespace dae
 		void Remove(const GameObject& object);
 		void RemoveAll();
 
-		void Update();
+		void Update(float deltaTime);
+		void FixedUpdate(float fixedTimeStep);
 		void Render() const;
 
 		~Scene() = default;
@@ -26,7 +26,6 @@ namespace dae
 		friend class SceneManager;
 		explicit Scene() = default;
 
-		std::vector < std::unique_ptr<GameObject>> m_objects{};
+		std::vector<std::unique_ptr<GameObject>> m_Objects{};
 	};
-
 }

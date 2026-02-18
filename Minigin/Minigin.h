@@ -2,12 +2,12 @@
 #include <string>
 #include <functional>
 #include <filesystem>
+#include <chrono>
 
 namespace dae
 {
 	class Minigin final
 	{
-		bool m_quit{};
 	public:
 		explicit Minigin(const std::filesystem::path& dataPath);
 		~Minigin();
@@ -18,5 +18,15 @@ namespace dae
 		Minigin(Minigin&& other) = delete;
 		Minigin& operator=(const Minigin& other) = delete;
 		Minigin& operator=(Minigin&& other) = delete;
+
+	private:
+		bool m_quit{};
+
+		// Timing
+		std::chrono::high_resolution_clock::time_point m_lastTime{};
+		float m_lag{};
+
+		static constexpr float MsPerFrame{ 1000.f / 60.f }; // 60 FPS cap
+		static constexpr float	FixedTimeStep{ 0.02f };	 // 50Hz fixed update
 	};
 }
