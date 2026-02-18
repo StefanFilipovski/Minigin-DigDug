@@ -238,6 +238,18 @@ else()
     )
   endif()
 
+  target_link_libraries("${TARGET_NAME}" PUBLIC
+  SDL3::SDL3
+  SDL3_ttf::SDL3_ttf
+  glm::glm
+  ${VLD_LIBRARIES}
+)
+
+# Treat SDL headers as system headers to suppress warnings
+target_include_directories(${TARGET_NAME} SYSTEM PRIVATE
+  ${SDL3_INCLUDE_DIRS}
+  ${SDL3_TTF_INCLUDE_DIRS}
+)
   # Copy Data folder to output directory after build
   add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/Data" "$<TARGET_FILE_DIR:${TARGET_NAME}>/Data"
