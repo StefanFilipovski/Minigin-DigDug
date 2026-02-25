@@ -12,7 +12,6 @@ void Scene::Add(std::unique_ptr<GameObject> object)
 
 void Scene::Remove(const GameObject& object)
 {
-	// Mark as dead, cleaned up after update finishes
 	auto it = std::find_if(m_Objects.begin(), m_Objects.end(),
 		[&object](const auto& ptr) { return ptr.get() == &object; });
 
@@ -27,15 +26,15 @@ void Scene::RemoveAll()
 
 void Scene::Update(float deltaTime)
 {
-	for (auto& object : m_Objects)
+	// Update objects regardless of hierarchy
+		for (auto& object : m_Objects)
 		object->Update(deltaTime);
 
-	// Clean up dead objects after all updates are done
+	// Clean up dead objects
 	m_Objects.erase(
 		std::remove_if(m_Objects.begin(), m_Objects.end(),
 			[](const auto& ptr) { return ptr->IsMarkedForDestroy(); }),
-		m_Objects.end()
-	);
+		m_Objects.end());
 }
 
 void Scene::FixedUpdate(float fixedTimeStep)
@@ -46,6 +45,7 @@ void Scene::FixedUpdate(float fixedTimeStep)
 
 void Scene::Render() const
 {
+	// Render objects
 	for (const auto& object : m_Objects)
 		object->Render();
 }

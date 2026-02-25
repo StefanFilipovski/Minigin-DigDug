@@ -4,23 +4,27 @@
 #include "Renderer.h"
 #include "GameObject.h"
 
-void dae::RenderComponent::Render() const
+namespace dae
 {
-	if (!m_Texture) return;
+	void RenderComponent::Render() const
+	{
+		if (!m_Texture) return;
 
-	auto* transform = GetOwner()->GetComponent<TransformComponent>();
-	if (!transform) return;
+		auto* transform = GetOwner()->GetComponent<TransformComponent>();
+		if (!transform) return;
 
-	const auto& pos = transform->GetPosition();
-	Renderer::GetInstance().RenderTexture(*m_Texture, pos.x, pos.y);
-}
+		// Use world position so children are rendered relative to their parent
+		const auto& pos = transform->GetWorldPosition();
+		Renderer::GetInstance().RenderTexture(*m_Texture, pos.x, pos.y);
+	}
 
-void dae::RenderComponent::SetTexture(const std::string& filename)
-{
-	m_Texture = ResourceManager::GetInstance().LoadTexture(filename);
-}
+	void RenderComponent::SetTexture(const std::string& filename)
+	{
+		m_Texture = ResourceManager::GetInstance().LoadTexture(filename);
+	}
 
-void dae::RenderComponent::SetTexture(std::shared_ptr<Texture2D> texture)
-{
-	m_Texture = texture;
+	void RenderComponent::SetTexture(std::shared_ptr<Texture2D> texture)
+	{
+		m_Texture = texture;
+	}
 }

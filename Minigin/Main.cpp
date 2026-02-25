@@ -2,13 +2,6 @@
 #include <vld.h>
 #endif
 
-#if _DEBUG && __has_include(<vld.h>)
-#include <vld.h>
-#pragma message("VLD included")
-#else
-#pragma message("VLD NOT included")
-#endif
-
 #include <filesystem>
 #include "Minigin.h"
 #include "SceneManager.h"
@@ -17,8 +10,10 @@
 #include "GameObject.h"
 #include "TransformComponent.h"
 #include "RenderComponent.h"
-#include "TextComponent.h"
+#include "CircleMovementComponent.h"
+#include "RotatorComponent.h"
 #include "FPSComponent.h"
+#include "TextComponent.h"
 
 namespace fs = std::filesystem;
 
@@ -29,26 +24,15 @@ static void load()
 	// Background
 	auto background = std::make_unique<dae::GameObject>();
 	background->AddComponent<dae::TransformComponent>();
-	auto* bgRender = background->AddComponent<dae::RenderComponent>();
-	bgRender->SetTexture("background.png");
+	background->AddComponent<dae::RenderComponent>()->SetTexture("background.png");
 	scene.Add(std::move(background));
 
-	// Logo
-	auto logo = std::make_unique<dae::GameObject>();
-	auto* logoTransform = logo->AddComponent<dae::TransformComponent>();
-	logoTransform->SetPosition(358, 180);
-	auto* logoRender = logo->AddComponent<dae::RenderComponent>();
-	logoRender->SetTexture("logo.png");
-	scene.Add(std::move(logo));
 
-	// Title text
-	auto font = dae::ResourceManager::GetInstance().LoadFont("Lingua.otf", 36);
-	auto titleGo = std::make_unique<dae::GameObject>();
-	auto* titleTransform = titleGo->AddComponent<dae::TransformComponent>();
-	titleTransform->SetPosition(292, 20);
-	auto* titleText = titleGo->AddComponent<dae::TextComponent>(font, "Programming 4 Assignment");
-	titleText->SetColor({ 255, 255, 0, 255 });
-	scene.Add(std::move(titleGo));
+	// Logo
+		auto logo = std::make_unique<dae::GameObject>();
+	logo->AddComponent<dae::TransformComponent>()->SetLocalPosition(350.f, 216.f, 0.f);
+	logo->AddComponent<dae::RenderComponent>()->SetTexture("logo.png");
+	scene.Add(std::move(logo));
 
 	// FPS counter
 	auto fpsGo = std::make_unique<dae::GameObject>();
@@ -59,6 +43,36 @@ static void load()
 	fpsGo->AddComponent<dae::FPSComponent>();
 	scene.Add(std::move(fpsGo));
 
+	// Character A: moves in a circle around the screen centre 
+	auto charA = std::make_unique<dae::GameObject>();
+	charA->AddComponent<dae::TransformComponent>();
+	charA->AddComponent<dae::RenderComponent>()->SetTexture("Batman.png");
+	charA->AddComponent<dae::CircleMovementComponent>(
+		glm::vec3{ 300.f, 150.f, 0.f }, 
+		150.f,
+		1.0f                              
+	);
+
+	// Character B: orbits around Character A
+	auto charB = std::make_unique<dae::GameObject>();
+	charB->AddComponent<dae::TransformComponent>();
+	charB->AddComponent<dae::RenderComponent>()->SetTexture("Batman.png");
+	charB->AddComponent<dae::RotatorComponent>(
+		60.f,    
+		3.0f     
+	);
+
+	// Store raw pointers before moving ownership into the scene
+	dae::GameObject* pCharA = charA.get();
+	dae::GameObject* pCharB = charB.get();
+
+	scene.Add(std::move(charA));
+	scene.Add(std::move(charB));
+
+
+	
+	pCharB->SetParent(pCharA, false);
+	
 }
 
 int main(int, char* [])

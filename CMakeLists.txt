@@ -34,7 +34,7 @@ add_executable(${TARGET_NAME} ${TARGET_PARAM}
   Minigin/TextComponent.cpp
   Minigin/FPSComponent.h
   Minigin/FPSComponent.cpp
-)
+ "Minigin/TransformComponent.cpp" "Minigin/RotatorComponent.h" "Minigin/RotatorComponent.cpp" "Minigin/CircleMovementComponent.h" "Minigin/CircleMovementComponent.cpp")
 
 # enable c++20 features
 target_compile_features(${TARGET_NAME} PUBLIC cxx_std_20)
@@ -112,9 +112,9 @@ if(NOT SDL3_ttf_FOUND)
 endif()
 
 if (WIN32)
-  # Add VLD (Visual Leak Detector) for memory leak detection on Windows
   find_package(VLD CONFIG)
 endif()
+
 
 # Add steam if available
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/steam")
@@ -134,7 +134,7 @@ target_link_libraries("${TARGET_NAME}" PUBLIC
 
 if(MSVC)
   # compile at warning level 4 + treat warnings as errors
-  target_compile_options(${TARGET_NAME} PRIVATE /W4 /WX)
+  target_compile_options(${TARGET_NAME} PRIVATE /W3 /WX)
 else()
   target_compile_options(${TARGET_NAME} PRIVATE -Wall -Wextra -Werror)
 endif()

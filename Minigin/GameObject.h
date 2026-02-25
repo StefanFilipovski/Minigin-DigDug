@@ -14,8 +14,20 @@ namespace dae
 		void Render() const;
 
 		void MarkForDestroy() { m_MarkedForDestroy = true; }
-		bool IsMarkedForDestroy()	const { return m_MarkedForDestroy; }
+		bool IsMarkedForDestroy() const { return m_MarkedForDestroy; }
+		~GameObject();
 
+		
+		// Scene Graph
+		void SetParent(GameObject* parent, bool keepWorldPosition = false);
+
+		GameObject* GetParent()    const { return m_parent; }
+		size_t      GetChildCount() const { return m_children.size(); }
+		GameObject* GetChildAt(size_t index) const { return m_children[index]; }
+
+		
+		//Component management
+		
 		template<typename T, typename... Args>
 		T* AddComponent(Args&&... args)
 		{
@@ -31,7 +43,6 @@ namespace dae
 		{
 			auto it = std::find_if(m_Components.begin(), m_Components.end(),
 				[](const auto& c) { return dynamic_cast<T*>(c.get()) != nullptr; });
-
 			if (it != m_Components.end())
 				(*it)->MarkForDestroy();
 		}
@@ -40,28 +51,32 @@ namespace dae
 		T* GetComponent() const
 		{
 			for (const auto& c : m_Components)
-			{
 				if (auto* casted = dynamic_cast<T*>(c.get()))
 					return casted;
-			}
 			return nullptr;
 		}
 
 		template<typename T>
-		bool HasComponent() const
-		{
-			return GetComponent<T>() != nullptr;
-		}
+		bool HasComponent() const { return GetComponent<T>() != nullptr; }
 
 		GameObject() = default;
-		~GameObject() = default;
-		GameObject(const GameObject& other) = delete;
-		GameObject(GameObject&& other) = delete;
-		GameObject& operator=(const GameObject& other) = delete;
-		GameObject& operator=(GameObject&& other) = delete;
+		GameObject(const GameObject&) = delete;
+		GameObject(GameObject&&) = delete;
+		GameObject& operator=(const GameObject&) = delete;
+		GameObject& operator=(GameObject&&) = delete;
 
 	private:
+		// Low-level helpers — only SetParent should call these
+		void AddChild(GameObject* child);
+		void RemoveChild(GameObject* child);
+
+		// Returns true if 'candidate' is a descendant of this object (or this itself)
+		bool IsDescendant(const GameObject* candidate) const;
+
 		std::vector<std::unique_ptr<Component>> m_Components{};
 		bool m_MarkedForDestroy{ false };
+
+		GameObject* m_parent{};
+		std::vector<GameObject*> m_children{};
 	};
 }
