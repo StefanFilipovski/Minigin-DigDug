@@ -12,6 +12,7 @@ namespace dae
 		void Update(float deltaTime);
 		void FixedUpdate(float fixedTimeStep);
 		void Render() const;
+		void RenderImGui();
 
 		void MarkForDestroy() { m_MarkedForDestroy = true; }
 		bool IsMarkedForDestroy() const { return m_MarkedForDestroy; }

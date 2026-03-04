@@ -49,3 +49,9 @@ void Scene::Render() const
 	for (const auto& object : m_Objects)
 		object->Render();
 }
+
+void Scene::RenderImGui() const
+{
+	for (const auto& object : m_Objects)
+		object->RenderImGui();
+}

@@ -14,6 +14,7 @@ namespace dae
 		void Update(float deltaTime);
 		void FixedUpdate(float fixedTimeStep);
 		void Render();
+		void RenderImGui();
 
 	private:
 		friend class Singleton<SceneManager>;

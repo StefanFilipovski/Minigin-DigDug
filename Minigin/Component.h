@@ -10,9 +10,10 @@ namespace dae
 		virtual void Update(float) {}
 		virtual void FixedUpdate(float) {}
 		virtual void Render() const {}
+		virtual void RenderImGui() {}
 
 		void MarkForDestroy() { m_MarkedForDestroy = true; }
-		bool IsMarkedForDestroy()	const { return m_MarkedForDestroy; }
+		bool IsMarkedForDestroy() const { return m_MarkedForDestroy; }
 
 		GameObject* GetOwner() const { return m_pOwner; }
 

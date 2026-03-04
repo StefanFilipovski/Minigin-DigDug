@@ -107,3 +107,9 @@ namespace dae
 	}
 
 } // namespace dae
+
+void dae::GameObject::RenderImGui()
+{
+	for (const auto& c : m_Components)
+		c->RenderImGui();
+}

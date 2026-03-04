@@ -14,6 +14,7 @@
 #include "RotatorComponent.h"
 #include "FPSComponent.h"
 #include "TextComponent.h"
+#include <BenchmarkComponent.h>
 
 namespace fs = std::filesystem;
 
@@ -72,6 +73,11 @@ static void load()
 
 	
 	pCharB->SetParent(pCharA, false);
+
+	// Benchmark GameObject — runs Ex1 & Ex2 on startup, displays ImGui graphs
+	auto benchmarkGo = std::make_unique<dae::GameObject>();
+	benchmarkGo->AddComponent<dae::BenchmarkComponent>();
+	scene.Add(std::move(benchmarkGo));
 	
 }
 
