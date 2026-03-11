@@ -10,11 +10,11 @@
 #include "GameObject.h"
 #include "TransformComponent.h"
 #include "RenderComponent.h"
-#include "CircleMovementComponent.h"
-#include "RotatorComponent.h"
-#include "FPSComponent.h"
+#include "BenchmarkComponent.h"
+#include "InputManager.h"
+#include "MoveCommand.h"
 #include "TextComponent.h"
-#include <BenchmarkComponent.h>
+#include "FPSComponent.h"
 
 namespace fs = std::filesystem;
 
@@ -28,57 +28,59 @@ static void load()
 	background->AddComponent<dae::RenderComponent>()->SetTexture("background.png");
 	scene.Add(std::move(background));
 
-
-	// Logo
-		auto logo = std::make_unique<dae::GameObject>();
-	logo->AddComponent<dae::TransformComponent>()->SetLocalPosition(350.f, 216.f, 0.f);
+	//Title logo
+	auto logo = std::make_unique<dae::GameObject>();
+	logo->AddComponent<dae::TransformComponent>()->SetLocalPosition(350.f, 216.f);
 	logo->AddComponent<dae::RenderComponent>()->SetTexture("logo.png");
 	scene.Add(std::move(logo));
 
-	// FPS counter
+	//fps counter
 	auto fpsGo = std::make_unique<dae::GameObject>();
-	auto* fpsTransform = fpsGo->AddComponent<dae::TransformComponent>();
-	fpsTransform->SetPosition(10, 40);
-	auto fpsFont = dae::ResourceManager::GetInstance().LoadFont("Lingua.otf", 50);
-	fpsGo->AddComponent<dae::TextComponent>(fpsFont, "0 FPS");
+	fpsGo->AddComponent<dae::TransformComponent>()->SetLocalPosition(5.f, 20.f);
+	auto font = dae::ResourceManager::GetInstance().LoadFont("Lingua.otf", 30);
+	fpsGo->AddComponent<dae::TextComponent>(font, "FPS");
 	fpsGo->AddComponent<dae::FPSComponent>();
 	scene.Add(std::move(fpsGo));
 
-	// Character A: moves in a circle around the screen centre 
-	auto charA = std::make_unique<dae::GameObject>();
-	charA->AddComponent<dae::TransformComponent>();
-	charA->AddComponent<dae::RenderComponent>()->SetTexture("Batman.png");
-	charA->AddComponent<dae::CircleMovementComponent>(
-		glm::vec3{ 300.f, 150.f, 0.f }, 
-		150.f,
-		1.0f                              
-	);
 
-	// Character B: orbits around Character A
-	auto charB = std::make_unique<dae::GameObject>();
-	charB->AddComponent<dae::TransformComponent>();
-	charB->AddComponent<dae::RenderComponent>()->SetTexture("Batman.png");
-	charB->AddComponent<dae::RotatorComponent>(
-		60.f,    
-		3.0f     
-	);
+	//Character 1: WASD keyboard, speed 100
+	constexpr float speed1 = 2.f; // units per frame
+	auto player1 = std::make_unique<dae::GameObject>();
+	player1->AddComponent<dae::TransformComponent>()->SetLocalPosition(200.f, 400.f);
+	player1->AddComponent<dae::RenderComponent>()->SetTexture("Batman.png");
+	dae::GameObject* pPlayer1 = player1.get();
+	scene.Add(std::move(player1));
 
-	// Store raw pointers before moving ownership into the scene
-	dae::GameObject* pCharA = charA.get();
-	dae::GameObject* pCharB = charB.get();
+	// Character 2: DPad controller (index 0), double speed
+	constexpr float speed2 = speed1 * 2.f;
+	auto player2 = std::make_unique<dae::GameObject>();
+	player2->AddComponent<dae::TransformComponent>()->SetLocalPosition(400.f, 400.f);
+	player2->AddComponent<dae::RenderComponent>()->SetTexture("Batman.png");
+	dae::GameObject* pPlayer2 = player2.get();
+	scene.Add(std::move(player2));
 
-	scene.Add(std::move(charA));
-	scene.Add(std::move(charB));
+	//keyboard commands for player 1 (WASD)
+	auto& input = dae::InputManager::GetInstance();
 
+	input.BindKeyboardCommand(SDL_SCANCODE_W, dae::KeyState::Pressed,
+		std::make_unique<dae::MoveCommand>(pPlayer1, glm::vec3{ 0,-1,0 }, speed1));
+	input.BindKeyboardCommand(SDL_SCANCODE_S, dae::KeyState::Pressed,
+		std::make_unique<dae::MoveCommand>(pPlayer1, glm::vec3{ 0, 1,0 }, speed1));
+	input.BindKeyboardCommand(SDL_SCANCODE_A, dae::KeyState::Pressed,
+		std::make_unique<dae::MoveCommand>(pPlayer1, glm::vec3{ -1,0,0 }, speed1));
+	input.BindKeyboardCommand(SDL_SCANCODE_D, dae::KeyState::Pressed,
+		std::make_unique<dae::MoveCommand>(pPlayer1, glm::vec3{ 1,0,0 }, speed1));
 
-	
-	pCharB->SetParent(pCharA, false);
-
-	// Benchmark GameObject — runs Ex1 & Ex2 on startup, displays ImGui graphs
-	auto benchmarkGo = std::make_unique<dae::GameObject>();
-	benchmarkGo->AddComponent<dae::BenchmarkComponent>();
-	scene.Add(std::move(benchmarkGo));
-	
+	// DPad commands for player 2 (controller 0) 
+	input.BindControllerCommand(0, dae::Controller::Button::DPadUp, dae::KeyState::Pressed,
+		std::make_unique<dae::MoveCommand>(pPlayer2, glm::vec3{ 0,-1,0 }, speed2));
+	input.BindControllerCommand(0, dae::Controller::Button::DPadDown, dae::KeyState::Pressed,
+		std::make_unique<dae::MoveCommand>(pPlayer2, glm::vec3{ 0, 1,0 }, speed2));
+	input.BindControllerCommand(0, dae::Controller::Button::DPadLeft, dae::KeyState::Pressed,
+		std::make_unique<dae::MoveCommand>(pPlayer2, glm::vec3{ -1,0,0 }, speed2));
+	input.BindControllerCommand(0, dae::Controller::Button::DPadRight, dae::KeyState::Pressed,
+		std::make_unique<dae::MoveCommand>(pPlayer2, glm::vec3{ 1,0,0 }, speed2));
+		
 }
 
 int main(int, char* [])
