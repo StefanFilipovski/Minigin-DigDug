@@ -34,7 +34,7 @@ add_executable(${TARGET_NAME} ${TARGET_PARAM}
   Minigin/TextComponent.cpp
   Minigin/FPSComponent.h
   Minigin/FPSComponent.cpp
- "Minigin/TransformComponent.cpp" "Minigin/RotatorComponent.h" "Minigin/RotatorComponent.cpp" "Minigin/CircleMovementComponent.h" "Minigin/CircleMovementComponent.cpp" "Minigin/BenchmarkComponent.h" "Minigin/BenchmarkComponent.cpp" "Minigin/Command.h" "Minigin/MoveCommand.h" "Minigin/MoveCommand.cpp" "Minigin/Controller.h" "Minigin/Controller.cpp")
+ "Minigin/TransformComponent.cpp" "Minigin/RotatorComponent.h" "Minigin/RotatorComponent.cpp" "Minigin/CircleMovementComponent.h" "Minigin/CircleMovementComponent.cpp" "Minigin/BenchmarkComponent.h" "Minigin/BenchmarkComponent.cpp" "Minigin/Command.h" "Minigin/MoveCommand.h" "Minigin/MoveCommand.cpp" "Minigin/Controller.h" "Minigin/Controller.cpp" "Minigin/EventIds.h" "Minigin/Observer.h" "Minigin/Subject.h" "Minigin/Subject.cpp" "Minigin/HealthComponent.h" "Minigin/HealthComponent.cpp" "Minigin/ScoreComponent.h" "Minigin/ScoreComponent.cpp" "Minigin/LivesDisplayComponent.h" "Minigin/LivesDisplayComponent.cpp" "Minigin/PointsDisplayComponent.h" "Minigin/PointsDisplayComponent.cpp" "Minigin/GainPointsCommand.h" "Minigin/DieCommand.h" "Minigin/SteamAchievementObserver.h" )
 
 # enable c++20 features
 target_compile_features(${TARGET_NAME} PUBLIC cxx_std_20)
@@ -119,6 +119,11 @@ endif()
 # Add steam if available
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/steam")
 find_package(Steamworks QUIET)
+if(Steamworks_FOUND)
+  message(STATUS "Steamworks SDK found!")
+else()
+  message(STATUS "Steamworks SDK NOT found - Steam features disabled")
+endif()
 
 target_include_directories("${TARGET_NAME}" PUBLIC
   ${CMAKE_SOURCE_DIR}/Minigin/
