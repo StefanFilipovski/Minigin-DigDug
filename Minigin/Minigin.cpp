@@ -17,6 +17,10 @@
 #include "Renderer.h"
 #include "ResourceManager.h"
 
+#ifdef USE_STEAMWORKS
+#include "steam_api.h"
+#endif
+
 using namespace std::chrono;
 
 SDL_Window* g_window{};
@@ -74,6 +78,13 @@ dae::Minigin::Minigin(const std::filesystem::path& dataPath)
 
 	Renderer::GetInstance().Init(g_window);
 	ResourceManager::GetInstance().Init(dataPath);
+
+#ifdef USE_STEAMWORKS
+	if (!SteamAPI_Init())
+	{
+		std::cerr << "SteamAPI_Init() failed. Make sure Steam is running and steam_appid.txt is present.\n";
+	}
+#endif
 }
 
 dae::Minigin::~Minigin()
@@ -81,6 +92,11 @@ dae::Minigin::~Minigin()
 	Renderer::GetInstance().Destroy();
 	SDL_DestroyWindow(g_window);
 	g_window = nullptr;
+
+#ifdef USE_STEAMWORKS
+	SteamAPI_Shutdown();
+#endif
+
 	SDL_Quit();
 }
 
@@ -113,14 +129,18 @@ void dae::Minigin::RunOneFrame()
 	m_quit = !InputManager::GetInstance().ProcessInput();
 
 	// Fixed update 
-		while (m_lag >= FixedTimeStep)
-		{
+	while (m_lag >= FixedTimeStep)
+	{
 		SceneManager::GetInstance().FixedUpdate(FixedTimeStep);
 		m_lag -= FixedTimeStep;
-		}
+	}
 
 	// Regular update
 	SceneManager::GetInstance().Update(deltaTime);
+
+#ifdef USE_STEAMWORKS
+	SteamAPI_RunCallbacks();
+#endif
 
 	// Render 
 	Renderer::GetInstance().Render();
