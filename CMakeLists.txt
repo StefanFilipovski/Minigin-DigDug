@@ -15,6 +15,7 @@ endif()
 
 # list source files here
 add_executable(${TARGET_NAME} ${TARGET_PARAM}
+  # --- Engine core ---
   Minigin/Font.cpp
   Minigin/GameObject.cpp
   Minigin/InputManager.cpp
@@ -26,15 +27,66 @@ add_executable(${TARGET_NAME} ${TARGET_PARAM}
   Minigin/SceneManager.cpp
   Minigin/Texture2D.cpp
   Minigin/Transform.cpp
+  Minigin/TransformComponent.cpp
+  Minigin/RenderComponent.cpp
+  Minigin/TextComponent.cpp
+  Minigin/FPSComponent.cpp
+  Minigin/Controller.cpp
+  Minigin/Subject.cpp
+
+  # --- Engine headers ---
   Minigin/Component.h
   Minigin/TransformComponent.h
   Minigin/RenderComponent.h
-  Minigin/RenderComponent.cpp
   Minigin/TextComponent.h
-  Minigin/TextComponent.cpp
   Minigin/FPSComponent.h
-  Minigin/FPSComponent.cpp
- "Minigin/TransformComponent.cpp" "Minigin/RotatorComponent.h" "Minigin/RotatorComponent.cpp" "Minigin/CircleMovementComponent.h" "Minigin/CircleMovementComponent.cpp" "Minigin/BenchmarkComponent.h" "Minigin/BenchmarkComponent.cpp" "Minigin/Command.h" "Minigin/MoveCommand.h" "Minigin/MoveCommand.cpp" "Minigin/Controller.h" "Minigin/Controller.cpp" "Minigin/EventIds.h" "Minigin/Observer.h" "Minigin/Subject.h" "Minigin/Subject.cpp" "Minigin/HealthComponent.h" "Minigin/HealthComponent.cpp" "Minigin/ScoreComponent.h" "Minigin/ScoreComponent.cpp" "Minigin/LivesDisplayComponent.h" "Minigin/LivesDisplayComponent.cpp" "Minigin/PointsDisplayComponent.h" "Minigin/PointsDisplayComponent.cpp" "Minigin/GainPointsCommand.h" "Minigin/DieCommand.h" "Minigin/SteamAchievementObserver.h" )
+  Minigin/Command.h
+  Minigin/Controller.h
+  Minigin/EventIds.h
+  Minigin/Observer.h
+  Minigin/Subject.h
+  Minigin/Singleton.h
+  Minigin/GameState.h
+  Minigin/GameStateManager.h
+
+  # --- Demo/benchmark components (can remove later) ---
+  Minigin/RotatorComponent.h
+  Minigin/RotatorComponent.cpp
+  Minigin/CircleMovementComponent.h
+  Minigin/CircleMovementComponent.cpp
+  Minigin/BenchmarkComponent.h
+  Minigin/BenchmarkComponent.cpp
+  Minigin/MoveCommand.h
+  Minigin/MoveCommand.cpp
+
+  # --- Game components ---
+  Minigin/HealthComponent.h
+  Minigin/HealthComponent.cpp
+  Minigin/ScoreComponent.h
+  Minigin/ScoreComponent.cpp
+  Minigin/LivesDisplayComponent.h
+  Minigin/LivesDisplayComponent.cpp
+  Minigin/PointsDisplayComponent.h
+  Minigin/PointsDisplayComponent.cpp
+  Minigin/GainPointsCommand.h
+  Minigin/DieCommand.h
+  Minigin/SteamAchievementObserver.h
+
+  # --- Game state machine & level loading ---
+  Minigin/GameMode.h
+  Minigin/GameSession.h
+  Minigin/GameSession.cpp
+  Minigin/MenuState.h
+  Minigin/MenuState.cpp
+  Minigin/PlayingState.h
+  Minigin/PlayingState.cpp
+  Minigin/GameOverState.h
+  Minigin/GameOverState.cpp
+  Minigin/HighScoreState.h
+  Minigin/HighScoreState.cpp
+  Minigin/LevelLoader.h
+  Minigin/LevelLoader.cpp
+ "Minigin/GridComponent.h" "Minigin/GridComponent.cpp" "Minigin/GridMovementComponent.h" "Minigin/GridMovementComponent.cpp" "Minigin/GridMoveCommand.h" "Minigin/SpriteAnimatorComponent.cpp" "Minigin/SpriteAnimatorComponent.h" "Minigin/PlayerAnimController.h" "Minigin/PlayerAnimController.cpp" "Minigin/PumpComponent.h" "Minigin/PumpComponent.cpp" "Minigin/PumpCommand.h")
 
 # enable c++20 features
 target_compile_features(${TARGET_NAME} PUBLIC cxx_std_20)
@@ -277,7 +329,8 @@ add_library(imgui STATIC
   ${imgui_SOURCE_DIR}/imgui_widgets.cpp
   ${imgui_SOURCE_DIR}/imgui_demo.cpp
   ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
-  ${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer3.cpp)
+  ${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer3.cpp
+ "Minigin/GridComponent.h" "Minigin/GridComponent.cpp" "Minigin/GridMovementComponent.h" "Minigin/GridMovementComponent.cpp" "Minigin/GridMoveCommand.h" )
 
 target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${sdl3_SOURCE_DIR}/include)
 target_link_libraries(imgui PUBLIC SDL3::SDL3)
@@ -286,6 +339,7 @@ target_compile_features(imgui PUBLIC cxx_std_20)
 
 target_include_directories("${TARGET_NAME}" PUBLIC 
   ${CMAKE_SOURCE_DIR}/Minigin/
+  ${CMAKE_SOURCE_DIR}/cmake/nlohmann/
   ${glm_SOURCE_DIR}
   ${sdl3_SOURCE_DIR}/include
   ${sdl3_image_SOURCE_DIR}/include

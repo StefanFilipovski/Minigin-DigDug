@@ -14,12 +14,9 @@
 #include "Minigin.h"
 #include "InputManager.h"
 #include "SceneManager.h"
+#include "GameStateManager.h"
 #include "Renderer.h"
 #include "ResourceManager.h"
-
-#ifdef USE_STEAMWORKS
-#include "steam_api.h"
-#endif
 
 using namespace std::chrono;
 
@@ -66,9 +63,9 @@ dae::Minigin::Minigin(const std::filesystem::path& dataPath)
 	}
 
 	g_window = SDL_CreateWindow(
-		"Programming 4 assignment",
-		1024,
-		576,
+		"Dig Dug - Programming 4",
+		640,
+		480,
 		SDL_WINDOW_OPENGL
 	);
 	if (g_window == nullptr)
@@ -78,13 +75,6 @@ dae::Minigin::Minigin(const std::filesystem::path& dataPath)
 
 	Renderer::GetInstance().Init(g_window);
 	ResourceManager::GetInstance().Init(dataPath);
-
-#ifdef USE_STEAMWORKS
-	if (!SteamAPI_Init())
-	{
-		std::cerr << "SteamAPI_Init() failed. Make sure Steam is running and steam_appid.txt is present.\n";
-	}
-#endif
 }
 
 dae::Minigin::~Minigin()
@@ -92,11 +82,6 @@ dae::Minigin::~Minigin()
 	Renderer::GetInstance().Destroy();
 	SDL_DestroyWindow(g_window);
 	g_window = nullptr;
-
-#ifdef USE_STEAMWORKS
-	SteamAPI_Shutdown();
-#endif
-
 	SDL_Quit();
 }
 
@@ -117,35 +102,34 @@ void dae::Minigin::Run(const std::function<void()>& load)
 
 void dae::Minigin::RunOneFrame()
 {
-	// Calculate delta time 
+	// Calculate delta time
 	const auto currentTime = high_resolution_clock::now();
 	const float deltaTime = duration<float>(currentTime - m_lastTime).count();
 	m_lastTime = currentTime;
 
-	// Accumulate lag 
+	// Accumulate lag
 	m_lag += deltaTime;
 
-	// Input 
+	// 1. Input
 	m_quit = !InputManager::GetInstance().ProcessInput();
 
-	// Fixed update 
+	// 2. Variable update (consumes input, runs once per frame)
+	GameStateManager::GetInstance().Update(deltaTime);
+	SceneManager::GetInstance().Update(deltaTime);
+
+	// 3. Fixed update (physics/logic at stable rate)
 	while (m_lag >= FixedTimeStep)
 	{
+		GameStateManager::GetInstance().FixedUpdate(FixedTimeStep);
 		SceneManager::GetInstance().FixedUpdate(FixedTimeStep);
 		m_lag -= FixedTimeStep;
 	}
 
-	// Regular update
-	SceneManager::GetInstance().Update(deltaTime);
-
-#ifdef USE_STEAMWORKS
-	SteamAPI_RunCallbacks();
-#endif
-
-	// Render 
+	// 4. Render
+	GameStateManager::GetInstance().Render();
 	Renderer::GetInstance().Render();
 
-	// Sleep
+	// 5. Sleep
 	const auto sleepTime = currentTime + std::chrono::duration<float, std::milli>(MsPerFrame) - high_resolution_clock::now();
 	std::this_thread::sleep_for(sleepTime);
 }

@@ -11,9 +11,9 @@ namespace dae
 {
 	enum class KeyState
 	{
-		Down,      
-		Up,        
-		Pressed,   
+		Down,
+		Up,
+		Pressed,
 	};
 
 	class InputManager final : public Singleton<InputManager>
@@ -21,21 +21,26 @@ namespace dae
 	public:
 		bool ProcessInput();
 
-		//Keyboard binding 
+		// Keyboard binding 
 		void BindKeyboardCommand(SDL_Scancode key, KeyState state, std::unique_ptr<Command> pCommand);
 		void UnbindKeyboardCommand(SDL_Scancode key, KeyState state);
 
-		//Controller binding 
+		// Controller binding 
 		void BindControllerCommand(unsigned int controllerIdx, Controller::Button button,
 			KeyState state, std::unique_ptr<Command> pCommand);
 		void UnbindControllerCommand(unsigned int controllerIdx, Controller::Button button,
 			KeyState state);
 
+		// Bulk clearing — safe to call during command execution (from state transitions)
+		void ClearAllBindings();
+		void ClearKeyboardBindings();
+		void ClearControllerBindings();
+
 	private:
 		friend class Singleton<InputManager>;
 		InputManager() = default;
 
-		//Keyboard state tracking
+		// Keyboard state tracking
 		const bool* m_pKeyboardState{ nullptr };
 		bool m_PreviousKeyState[SDL_SCANCODE_COUNT]{};
 
@@ -43,7 +48,7 @@ namespace dae
 		static constexpr unsigned int MaxControllers{ 4 };
 		std::vector<std::unique_ptr<Controller>> m_Controllers{};
 
-		//Binding maps
+		// Binding maps
 		struct KeyboardBinding
 		{
 			SDL_Scancode key;
@@ -76,5 +81,14 @@ namespace dae
 
 		std::map<KeyboardBinding, std::unique_ptr<Command>, KeyboardBindingCmp>   m_KeyboardCommands{};
 		std::map<ControllerBinding, std::unique_ptr<Command>, ControllerBindingCmp> m_ControllerCommands{};
+
+		// Set to true when a clear is requested during command execution.
+		// ProcessInput checks this after each Execute() and breaks out of the loop.
+		bool m_bindingsInvalidated{ false };
+
+		// Commands moved here during ClearAllBindings survive until the next
+		// ProcessInput frame, preventing use-after-free when a command triggers
+		// a state transition that clears the map owning that very command.
+		std::vector<std::unique_ptr<Command>> m_commandGraveyard{};
 	};
 }

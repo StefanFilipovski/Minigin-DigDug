@@ -1,6 +1,7 @@
 ﻿#pragma once
-#include <glm/vec2.hpp>
 #include <string>
+#include "../out/build/x64-debug/_deps/glm-src/glm/ext/vector_int2.hpp"
+#include "../out/build/x64-debug/_deps/glm-src/glm/ext/vector_float2.hpp"
 
 struct SDL_Texture;
 namespace dae

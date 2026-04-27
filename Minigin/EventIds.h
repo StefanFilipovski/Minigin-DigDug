@@ -3,7 +3,7 @@
 
 namespace dae
 {
-	//sbdm hash
+	// SDBM hash
 	using EventId = unsigned int;
 
 	template <int length> struct sdbm_hash
@@ -35,7 +35,14 @@ namespace dae
 		return sdbm_hash<N - 1>::calculate(text);
 	}
 
-	// Game event Ids
+	// Engine events
 	inline constexpr EventId EVENT_PLAYER_DIED = make_sdbm_hash("PlayerDied");
 	inline constexpr EventId EVENT_POINTS_GAINED = make_sdbm_hash("PointsGained");
+
+	// Dig Dug game events
+	inline constexpr EventId EVENT_ENEMY_KILLED = make_sdbm_hash("EnemyKilled");
+	inline constexpr EventId EVENT_ALL_ENEMIES_DEAD = make_sdbm_hash("AllEnemiesDead");
+	inline constexpr EventId EVENT_GAME_OVER = make_sdbm_hash("GameOver");
+	inline constexpr EventId EVENT_LEVEL_COMPLETE = make_sdbm_hash("LevelComplete");
+	inline constexpr EventId EVENT_ROCK_DROPPED = make_sdbm_hash("RockDropped");
 }
