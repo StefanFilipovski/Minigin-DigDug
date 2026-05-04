@@ -32,7 +32,6 @@ namespace dae
 
 		m_pAnimator->Resume();
 
-		// Use dig animation when moving into dirt, walk when in tunnels
 		std::string prefix = m_pMovement->IsDigging() ? "dig" : "walk";
 
 		if (dir.x > 0)

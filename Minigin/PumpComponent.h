@@ -55,20 +55,13 @@ namespace dae
 		float m_retractTimer{ 0.f };
 		static constexpr float RetractDelay{ 0.15f };
 
-		// Hose sprite data — source rects on the spritesheet
-		struct HoseSprite
-		{
-			SDL_FRect srcRect;    // Source rectangle on spritesheet
-			float renderWidth;    // Rendered width in pixels (scaled to grid)
-			float renderHeight;   // Rendered height in pixels
-		};
-
-		HoseSprite m_hoseRight;
-		HoseSprite m_hoseLeft;
-		HoseSprite m_hoseUp;
-		HoseSprite m_hoseDown;
-
-		std::shared_ptr<Texture2D> m_spriteSheet;
+		// PumpString.png is a 32×6 horizontal sprite (extending right).
+		// We rotate it for up/down/left and clip the source to animate extension.
+		std::shared_ptr<Texture2D> m_hoseTexture;
+		float m_hoseSrcW{ 32.f }; // native sprite width
+		float m_hoseSrcH{ 6.f };  // native sprite height (the "thickness" of the rope)
+		float m_hoseRenderLong{ 32.f };  // pixels along the firing axis at full extension
+		float m_hoseRenderShort{ 6.f };  // pixels perpendicular to firing axis
 
 		void CalculateRange();
 		void CacheComponents();

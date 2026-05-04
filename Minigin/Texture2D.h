@@ -1,5 +1,7 @@
 ﻿#pragma once
+#include <optional>
 #include <string>
+#include <SDL3/SDL_pixels.h>
 #include "../out/build/x64-debug/_deps/glm-src/glm/ext/vector_int2.hpp"
 #include "../out/build/x64-debug/_deps/glm-src/glm/ext/vector_float2.hpp"
 
@@ -14,7 +16,8 @@ namespace dae
 	public:
 		SDL_Texture* GetSDLTexture() const;
 		explicit Texture2D(SDL_Texture* texture);
-		explicit Texture2D(const std::string& fullPath);
+		explicit Texture2D(const std::string& fullPath,
+			std::optional<SDL_Color> colorKey = std::nullopt);
 		~Texture2D();
 
 		glm::vec2 GetSize() const;

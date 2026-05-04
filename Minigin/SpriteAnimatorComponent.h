@@ -10,10 +10,10 @@ namespace dae
 
 	struct SpriteFrame
 	{
-		int x;  // Source x on spritesheet
-		int y;  // Source y on spritesheet
-		int w;  // Frame width (usually same for all frames)
-		int h;  // Frame height
+		int x;
+		int y;
+		int w;
+		int h;
 	};
 
 	struct SpriteAnimation
@@ -22,6 +22,7 @@ namespace dae
 		std::vector<SpriteFrame> frames;
 		float fps{ 8.f };
 		bool loop{ true };
+		std::string texture; // empty = use whatever texture the RenderComponent currently has
 	};
 
 	class SpriteAnimatorComponent final : public Component
@@ -31,17 +32,16 @@ namespace dae
 
 		void Update(float deltaTime) override;
 
-		// Add an animation
 		void AddAnimation(const std::string& name, const std::vector<SpriteFrame>& frames,
 			float fps = 8.f, bool loop = true);
+		void AddAnimation(const std::string& name, const std::string& texture,
+			const std::vector<SpriteFrame>& frames, float fps = 8.f, bool loop = true);
 
-		// Play an animation (no-op if already playing this one)
+		// No-op if the requested animation is already playing
 		void Play(const std::string& name);
 
-		// Set the render size for frames (how big to draw on screen)
 		void SetRenderSize(float w, float h);
 
-		// Pause/resume
 		void Pause() { m_paused = true; }
 		void Resume() { m_paused = false; }
 		bool IsPaused() const { return m_paused; }

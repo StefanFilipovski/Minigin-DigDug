@@ -51,14 +51,26 @@ namespace dae
 		m_animations[name] = std::move(anim);
 	}
 
+	void SpriteAnimatorComponent::AddAnimation(const std::string& name, const std::string& texture,
+		const std::vector<SpriteFrame>& frames, float fps, bool loop)
+	{
+		SpriteAnimation anim;
+		anim.name = name;
+		anim.texture = texture;
+		anim.frames = frames;
+		anim.fps = fps;
+		anim.loop = loop;
+		m_animations[name] = std::move(anim);
+	}
+
 	void SpriteAnimatorComponent::Play(const std::string& name)
 	{
 		if (m_currentAnimation == name)
-			return;  // Already playing
+			return;
 
 		auto it = m_animations.find(name);
 		if (it == m_animations.end())
-			return;  // Animation doesn't exist
+			return;
 
 		m_currentAnimation = name;
 		m_currentFrame = 0;
@@ -88,6 +100,9 @@ namespace dae
 		const auto& anim = it->second;
 		if (m_currentFrame < 0 || m_currentFrame >= static_cast<int>(anim.frames.size()))
 			return;
+
+		if (!anim.texture.empty())
+			m_pRender->SetTexture(anim.texture);
 
 		const auto& frame = anim.frames[m_currentFrame];
 		m_pRender->SetSourceRect(frame.x, frame.y, frame.w, frame.h);

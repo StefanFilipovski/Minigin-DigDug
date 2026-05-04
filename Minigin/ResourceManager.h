@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <map>
+#include <SDL3/SDL_pixels.h>
 #include "Singleton.h"
 
 namespace dae
@@ -14,6 +15,8 @@ namespace dae
 	public:
 		void Init(const std::filesystem::path& data);
 		std::shared_ptr<Texture2D> LoadTexture(const std::string& file);
+		// First load wins: if the file is loaded with a color key, that's what stays cached
+		std::shared_ptr<Texture2D> LoadTexture(const std::string& file, SDL_Color colorKey);
 		std::shared_ptr<Font> LoadFont(const std::string& file, uint8_t size);
 	private:
 		friend class Singleton<ResourceManager>;

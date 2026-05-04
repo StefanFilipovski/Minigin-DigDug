@@ -4,6 +4,8 @@
 #include "SpriteAnimatorComponent.h"
 #include "PlayerAnimController.h"
 #include "PumpComponent.h"
+#include "EnemyComponent.h"
+#include "PlayerCollisionComponent.h"
 #include "Scene.h"
 #include "GameObject.h"
 #include "TransformComponent.h"
@@ -15,6 +17,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <json.hpp>
+#include <SDL3/SDL_pixels.h>
 
 namespace dae
 {
@@ -107,10 +110,23 @@ namespace dae
 		if (mode == GameMode::CoOp)
 			result.pPlayer2 = CreatePlayer(scene, result.pGrid, data, 1);
 
-		result.enemies = CreateEnemies(scene, result.pGrid, data, mode, result.pVersusEnemy);
+		result.enemies = CreateEnemies(scene, result.pGrid, data, mode,
+			result.pVersusEnemy, result.pPlayer1);
 
 		CreateRocks(scene, result.pGrid, data);
 		CreateHUD(scene, mode);
+
+		// Wire up collision: tell the player about all enemies
+		if (result.pPlayer1)
+		{
+			auto* collision = result.pPlayer1->GetComponent<PlayerCollisionComponent>();
+			if (collision)
+			{
+				collision->SetSpawnPos(data.playerSpawn);
+				for (auto* enemy : result.enemies)
+					collision->AddEnemy(enemy);
+			}
+		}
 
 		return result;
 	}
@@ -167,62 +183,70 @@ namespace dae
 
 		player->AddComponent<TransformComponent>()->SetLocalPosition(spawnPixel.x, spawnPixel.y);
 
-		// Sprite rendering — use the spritesheet with source rects
-		auto* render = player->AddComponent<RenderComponent>();
-		render->SetTexture("general_sprites.png");
+		// Pre-cache the player sprite sheets with the red background keyed out.
+		// Cached textures stay keyed for the rest of the session.
+		SDL_Color redKey{ 255, 0, 0, 255 };
+		ResourceManager::GetInstance().LoadTexture("DigDugMove1.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("DigDugMoveShovel.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("DigDugMoveShovelHole.png", redKey);
 
-		// Set up sprite animator with Dig Dug walking animations
-		// Spritesheet layout: 16x16 grid
-		// Row 0 (y=0): walk right1, right2, up1, up2, left1, left2, down1, down2
-		// Row 1 (y=16): dig right1, right2, dig up1, up2, dig left1, left2, dig down1, down2
-		constexpr int S = 16; // Sprite size on the sheet
-		float cellSize = static_cast<float>(data.cellSize); // Render at grid cell size
+		auto* render = player->AddComponent<RenderComponent>();
+		render->SetTexture("DigDugMove1.png");
+
+		// Each player sheet is 128×16: 8 frames of 16×16 (right×2, up×2, left×2, down×2)
+		// DigDugMove1.png            — walk
+		// DigDugMoveShovel.png       — dig
+		// DigDugMoveShovelHole.png   — pump pose
+		constexpr int S = 16;
+		float cellSize = static_cast<float>(data.cellSize);
 
 		auto* animator = player->AddComponent<SpriteAnimatorComponent>();
 		animator->SetRenderSize(cellSize, cellSize);
 
-		animator->AddAnimation("walk_right",
+		const std::string walkTex = "DigDugMove1.png";
+		animator->AddAnimation("walk_right", walkTex,
 			{ {0 * S, 0, S, S}, {1 * S, 0, S, S} }, 8.f);
-		animator->AddAnimation("walk_up",
+		animator->AddAnimation("walk_up", walkTex,
 			{ {2 * S, 0, S, S}, {3 * S, 0, S, S} }, 8.f);
-		animator->AddAnimation("walk_left",
+		animator->AddAnimation("walk_left", walkTex,
 			{ {4 * S, 0, S, S}, {5 * S, 0, S, S} }, 8.f);
-		animator->AddAnimation("walk_down",
+		animator->AddAnimation("walk_down", walkTex,
 			{ {6 * S, 0, S, S}, {7 * S, 0, S, S} }, 8.f);
 
-		animator->AddAnimation("dig_right",
-			{ {0 * S, S, S, S}, {1 * S, S, S, S} }, 8.f);
-		animator->AddAnimation("dig_up",
-			{ {2 * S, S, S, S}, {3 * S, S, S, S} }, 8.f);
-		animator->AddAnimation("dig_left",
-			{ {4 * S, S, S, S}, {5 * S, S, S, S} }, 8.f);
-		animator->AddAnimation("dig_down",
-			{ {6 * S, S, S, S}, {7 * S, S, S, S} }, 8.f);
+		const std::string digTex = "DigDugMoveShovel.png";
+		animator->AddAnimation("dig_right", digTex,
+			{ {0 * S, 0, S, S}, {1 * S, 0, S, S} }, 8.f);
+		animator->AddAnimation("dig_up", digTex,
+			{ {2 * S, 0, S, S}, {3 * S, 0, S, S} }, 8.f);
+		animator->AddAnimation("dig_left", digTex,
+			{ {4 * S, 0, S, S}, {5 * S, 0, S, S} }, 8.f);
+		animator->AddAnimation("dig_down", digTex,
+			{ {6 * S, 0, S, S}, {7 * S, 0, S, S} }, 8.f);
 
-		// Row 1 cols 8-15: Pump pose (holding hose extended)
-		// right(2), up(2), left(2), down(2)
-		animator->AddAnimation("pump_right",
-			{ {8 * S, S, S, S}, {9 * S, S, S, S} }, 6.f);
-		animator->AddAnimation("pump_up",
-			{ {10 * S, S, S, S}, {11 * S, S, S, S} }, 6.f);
-		animator->AddAnimation("pump_left",
-			{ {12 * S, S, S, S}, {13 * S, S, S, S} }, 6.f);
-		animator->AddAnimation("pump_down",
-			{ {14 * S, S, S, S}, {15 * S, S, S, S} }, 6.f);
+		// Pump uses the same regular-shovel sheet as digging (no "hole" variant)
+		const std::string pumpTex = "DigDugMoveShovel.png";
+		animator->AddAnimation("pump_right", pumpTex,
+			{ {0 * S, 0, S, S}, {1 * S, 0, S, S} }, 6.f);
+		animator->AddAnimation("pump_up", pumpTex,
+			{ {2 * S, 0, S, S}, {3 * S, 0, S, S} }, 6.f);
+		animator->AddAnimation("pump_left", pumpTex,
+			{ {4 * S, 0, S, S}, {5 * S, 0, S, S} }, 6.f);
+		animator->AddAnimation("pump_down", pumpTex,
+			{ {6 * S, 0, S, S}, {7 * S, 0, S, S} }, 6.f);
 
-		// Start facing right
 		animator->Play("walk_right");
 		animator->Pause();
 
-		// Animation controller watches movement and picks the right anim
 		player->AddComponent<PlayerAnimController>();
 
-		// Grid movement: speed = 4 cells/second, canDig = true
+		// canDig = true
 		auto* movement = player->AddComponent<GridMovementComponent>(pGrid, 4.f, true);
 		movement->SetGridPosition(spawnGrid.x, spawnGrid.y);
 
-		// Pump attack
 		player->AddComponent<PumpComponent>(pGrid);
+
+		// Enemies are registered into this component after they're created
+		player->AddComponent<PlayerCollisionComponent>(pGrid);
 
 		GameObject* ptr = player.get();
 		scene.Add(std::move(player));
@@ -230,10 +254,14 @@ namespace dae
 	}
 
 	std::vector<GameObject*> LevelLoader::CreateEnemies(Scene& scene, GridComponent* pGrid,
-		const LevelData& data, GameMode mode, GameObject*& outVersusEnemy)
+		const LevelData& data, GameMode mode, GameObject*& outVersusEnemy,
+		GameObject* pPlayerTarget)
 	{
 		std::vector<GameObject*> enemies;
 		outVersusEnemy = nullptr;
+
+		constexpr int S = 16; // Sprite size on sheet
+		float cellSize = static_cast<float>(data.cellSize);
 
 		for (size_t i = 0; i < data.enemies.size(); ++i)
 		{
@@ -242,23 +270,81 @@ namespace dae
 
 			glm::vec2 spawnPixel = pGrid->GridToPixel(spawn.gridX, spawn.gridY);
 			enemy->AddComponent<TransformComponent>()->SetLocalPosition(spawnPixel.x, spawnPixel.y);
-			enemy->AddComponent<RenderComponent>();
-			auto* enemyRender = enemy->GetComponent<RenderComponent>();
-			enemyRender->SetTexture(
-				spawn.type == EnemySpawn::Type::Pooka ? "pooka.png" : "fygar.png");
 
-			// Enemies move through tunnels, speed slightly different per type
+			auto* render = enemy->AddComponent<RenderComponent>();
+			render->SetTexture("general_sprites.png");
+
+			auto* animator = enemy->AddComponent<SpriteAnimatorComponent>();
+			animator->SetRenderSize(cellSize, cellSize);
+
+			if (spawn.type == EnemySpawn::Type::Pooka)
+			{
+				// Pooka — Row 4 (y=64): walk right×2, up×2, left×2, down×2, ghost×1
+				//          Row 5 (y=80): inflate stages 1, 2, 3
+				animator->AddAnimation("walk_right",
+					{ {0 * S, 4 * S, S, S}, {1 * S, 4 * S, S, S} }, 6.f);
+				animator->AddAnimation("walk_up",
+					{ {2 * S, 4 * S, S, S}, {3 * S, 4 * S, S, S} }, 6.f);
+				animator->AddAnimation("walk_left",
+					{ {4 * S, 4 * S, S, S}, {5 * S, 4 * S, S, S} }, 6.f);
+				animator->AddAnimation("walk_down",
+					{ {6 * S, 4 * S, S, S}, {7 * S, 4 * S, S, S} }, 6.f);
+
+				animator->AddAnimation("ghost",
+					{ {8 * S, 4 * S, S, S} }, 1.f);
+
+				animator->AddAnimation("inflate_1",
+					{ {0 * S, 5 * S, S, S} }, 1.f, false);
+				animator->AddAnimation("inflate_2",
+					{ {1 * S, 5 * S, S, S} }, 1.f, false);
+				animator->AddAnimation("inflate_3",
+					{ {2 * S, 5 * S, S, S} }, 1.f, false);
+			}
+			else // Fygar
+			{
+				// Fygar — Row 6 (y=96): walk right×2, up×2, left×2, down×2, ghost×1
+				//          Row 7 (y=112): inflate stages 1, 2, 3
+				animator->AddAnimation("walk_right",
+					{ {0 * S, 6 * S, S, S}, {1 * S, 6 * S, S, S} }, 6.f);
+				animator->AddAnimation("walk_up",
+					{ {2 * S, 6 * S, S, S}, {3 * S, 6 * S, S, S} }, 6.f);
+				animator->AddAnimation("walk_left",
+					{ {4 * S, 6 * S, S, S}, {5 * S, 6 * S, S, S} }, 6.f);
+				animator->AddAnimation("walk_down",
+					{ {6 * S, 6 * S, S, S}, {7 * S, 6 * S, S, S} }, 6.f);
+
+				animator->AddAnimation("ghost",
+					{ {8 * S, 6 * S, S, S} }, 1.f);
+
+				animator->AddAnimation("inflate_1",
+					{ {0 * S, 7 * S, S, S} }, 1.f, false);
+				animator->AddAnimation("inflate_2",
+					{ {1 * S, 7 * S, S, S} }, 1.f, false);
+				animator->AddAnimation("inflate_3",
+					{ {2 * S, 7 * S, S, S} }, 1.f, false);
+			}
+
+			animator->Play("walk_right");
+
+			// canDig = false — enemies move through tunnels only
 			float enemySpeed = (spawn.type == EnemySpawn::Type::Pooka) ? 3.5f : 3.0f;
 			auto* movement = enemy->AddComponent<GridMovementComponent>(pGrid, enemySpeed, false);
 			movement->SetGridPosition(spawn.gridX, spawn.gridY);
 
-			// Make sure enemy spawn cell is a tunnel
+			// Ensure the spawn cell is passable so the enemy can move immediately
 			pGrid->SetCellType(spawn.gridX, spawn.gridY, CellType::Tunnel);
 
-			// In Versus mode, first Fygar is player-controlled
+			EnemyType eType = (spawn.type == EnemySpawn::Type::Pooka)
+				? EnemyType::Pooka : EnemyType::Fygar;
+
 			bool isVersusPlayer = (mode == GameMode::Versus &&
 				spawn.type == EnemySpawn::Type::Fygar &&
 				outVersusEnemy == nullptr);
+
+			if (!isVersusPlayer)
+			{
+				enemy->AddComponent<EnemyComponent>(pGrid, eType, pPlayerTarget);
+			}
 
 			GameObject* ptr = enemy.get();
 			enemies.push_back(ptr);

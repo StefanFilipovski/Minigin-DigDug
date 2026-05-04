@@ -26,6 +26,16 @@ std::shared_ptr<dae::Texture2D> dae::ResourceManager::LoadTexture(const std::str
 	return m_loadedTextures.at(filename);
 }
 
+std::shared_ptr<dae::Texture2D> dae::ResourceManager::LoadTexture(const std::string& file, SDL_Color colorKey)
+{
+	const auto fullPath = m_dataPath / file;
+	const auto filename = fs::path(fullPath).filename().string();
+	if (m_loadedTextures.find(filename) == m_loadedTextures.end())
+		m_loadedTextures.insert(std::pair(filename,
+			std::make_shared<Texture2D>(fullPath.string(), std::optional<SDL_Color>{ colorKey })));
+	return m_loadedTextures.at(filename);
+}
+
 std::shared_ptr<dae::Font> dae::ResourceManager::LoadFont(const std::string& file, uint8_t size)
 {
 	const auto fullPath = m_dataPath/file;

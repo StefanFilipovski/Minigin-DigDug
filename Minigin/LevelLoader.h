@@ -59,7 +59,8 @@ namespace dae
 		static GameObject* CreatePlayer(Scene& scene, GridComponent* pGrid,
 			const LevelData& data, int playerIndex);
 		static std::vector<GameObject*> CreateEnemies(Scene& scene, GridComponent* pGrid,
-			const LevelData& data, GameMode mode, GameObject*& outVersusEnemy);
+			const LevelData& data, GameMode mode, GameObject*& outVersusEnemy,
+			GameObject* pPlayerTarget);
 		static void CreateRocks(Scene& scene, GridComponent* pGrid, const LevelData& data);
 		static void CreateHUD(Scene& scene, GameMode mode);
 	};

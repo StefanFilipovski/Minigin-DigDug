@@ -16,7 +16,6 @@ namespace dae
 		, m_gridOffset(gridOffset)
 		, m_cells(static_cast<size_t>(width* height))
 	{
-		// Load the placeholder textures for grid rendering
 		m_dirtTexture = ResourceManager::GetInstance().LoadTexture("dirt.png");
 		m_tunnelTexture = ResourceManager::GetInstance().LoadTexture("tunnel.png");
 		m_surfaceTexture = ResourceManager::GetInstance().LoadTexture("surface.png");
@@ -39,13 +38,9 @@ namespace dae
 				{
 				case CellType::Dirt:
 				{
-					// Draw dirt as base
 					if (m_dirtTexture)
 						renderer.RenderTexture(*m_dirtTexture, px, py, cs, cs);
-
-					// If partially dug, draw tunnel over the dug portions
-					// For now, just show dirt — partial digging is an advanced visual
-					// that we can add later with the actual tunnel edge sprites
+					// Partial-dig edge sprites not yet implemented
 					break;
 				}
 				case CellType::Tunnel:
@@ -89,9 +84,6 @@ namespace dae
 		if (cell.type == CellType::Surface || cell.type == CellType::Tunnel)
 			return;
 
-		// When the player digs through a dirt cell, it becomes a tunnel immediately.
-		// The partial digging (open edges) is tracked for enemy pathfinding,
-		// but visually we just switch to tunnel for now.
 		cell.type = CellType::Tunnel;
 		cell.openLeft = true;
 		cell.openRight = true;

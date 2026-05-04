@@ -17,13 +17,11 @@ namespace dae
 
 	void GridMovementComponent::Update(float /*deltaTime*/)
 	{
-		// Called once per frame, after input processing.
-		// If no direction key was pressed this frame, clear the desired direction.
+		// If no input arrived this frame, clear direction. If a key is held,
+		// the input command will re-set it before the next Update.
 		if (!m_inputActive)
 			m_desiredDirection = { 0, 0 };
 
-		// Reset for next frame — if a key is held, the Pressed command
-		// will set it again before the next Update
 		m_inputActive = false;
 	}
 
@@ -56,11 +54,8 @@ namespace dae
 			m_pTransform->SetLocalPosition(m_pixelPos.x, m_pixelPos.y);
 		}
 
-		// Only start a new move if a direction is actively being requested
-		// and the pump is not active
 		if (!m_isMoving && m_desiredDirection != glm::ivec2{ 0, 0 })
 		{
-			// Don't move while the pump is firing
 			auto* pump = GetOwner()->GetComponent<PumpComponent>();
 			if (pump && pump->IsFiring())
 				return;
