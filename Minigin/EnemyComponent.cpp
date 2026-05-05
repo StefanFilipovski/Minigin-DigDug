@@ -74,10 +74,10 @@ namespace dae
 
 				if (m_pAnimator)
 				{
-					if (dir.x > 0) m_pAnimator->Play("walk_right");
-					else if (dir.x < 0) m_pAnimator->Play("walk_left");
-					else if (dir.y < 0) m_pAnimator->Play("walk_up");
-					else if (dir.y > 0) m_pAnimator->Play("walk_down");
+					if (dir.x > 0)      { m_lastHorizontalAnim = "walk_right"; m_pAnimator->Play("walk_right"); }
+					else if (dir.x < 0) { m_lastHorizontalAnim = "walk_left";  m_pAnimator->Play("walk_left"); }
+					else if (dir.y < 0) m_pAnimator->Play("walk_up");    // no-op for enemies without vertical sprites
+					else if (dir.y > 0) m_pAnimator->Play("walk_down");  // no-op for enemies without vertical sprites
 					m_pAnimator->Resume();
 				}
 			}
@@ -150,7 +150,7 @@ namespace dae
 				m_state = EnemyState::Normal;
 
 				if (m_pAnimator)
-					m_pAnimator->Play("walk_right");
+					m_pAnimator->Play(m_lastHorizontalAnim);
 
 				return;
 			}
@@ -369,7 +369,7 @@ namespace dae
 		m_pMovement->SetGhostMode(false);
 
 		if (m_pAnimator)
-			m_pAnimator->Play("walk_right");
+			m_pAnimator->Play(m_lastHorizontalAnim);
 	}
 
 	bool EnemyComponent::ShouldBecomeGhost() const

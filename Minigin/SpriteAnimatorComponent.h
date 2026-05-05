@@ -22,7 +22,9 @@ namespace dae
 		std::vector<SpriteFrame> frames;
 		float fps{ 8.f };
 		bool loop{ true };
-		std::string texture; // empty = use whatever texture the RenderComponent currently has
+		std::string texture;   // empty = keep current texture
+		float renderW{ 0.f };  // 0 = use animator's default render size
+		float renderH{ 0.f };
 	};
 
 	class SpriteAnimatorComponent final : public Component
@@ -41,6 +43,7 @@ namespace dae
 		void Play(const std::string& name);
 
 		void SetRenderSize(float w, float h);
+		void SetAnimationRenderSize(const std::string& name, float w, float h);
 
 		void Pause() { m_paused = true; }
 		void Resume() { m_paused = false; }

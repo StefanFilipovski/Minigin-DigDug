@@ -2,6 +2,7 @@
 #include "Component.h"
 #include "Subject.h"
 #include <glm/glm.hpp>
+#include <string>
 
 namespace dae
 {
@@ -89,6 +90,8 @@ namespace dae
 		// AI direction change
 		float m_dirChangeTimer{ 0.f };
 		float m_dirChangeInterval{ 0.3f };  // How often to reconsider direction
+
+		std::string m_lastHorizontalAnim{ "walk_right" }; // Reused when moving vertically
 
 		void CacheComponents() const;
 	};

@@ -185,7 +185,7 @@ namespace dae
 
 		// Pre-cache the player sprite sheets with the red background keyed out.
 		// Cached textures stay keyed for the rest of the session.
-		SDL_Color redKey{ 255, 0, 0, 255 };
+		SDL_Color redKey{ 108, 7, 0, 255 };
 		ResourceManager::GetInstance().LoadTexture("DigDugMove1.png", redKey);
 		ResourceManager::GetInstance().LoadTexture("DigDugMoveShovel.png", redKey);
 		ResourceManager::GetInstance().LoadTexture("DigDugMoveShovelHole.png", redKey);
@@ -260,8 +260,19 @@ namespace dae
 		std::vector<GameObject*> enemies;
 		outVersusEnemy = nullptr;
 
-		constexpr int S = 16; // Sprite size on sheet
+		constexpr int S = 16; // Sprite size on general_sprites sheet
 		float cellSize = static_cast<float>(data.cellSize);
+
+		// Pre-cache enemy sheets with background keyed out
+		SDL_Color redKey{ 108, 7, 0, 255 };
+		ResourceManager::GetInstance().LoadTexture("Enemy1Walk.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("Enemy1Ghost.png", redKey);
+
+		// Enemy1Walk.png layout: 2 rows × 3 columns, each frame 13×14 px
+		//   Row 0 (y=0):  walk right — frames at x=0, 13, 26
+		//   Row 1 (y=14): walk left  — frames at x=0, 13, 26
+		constexpr int EW = 13;
+		constexpr int EH = 14;
 
 		for (size_t i = 0; i < data.enemies.size(); ++i)
 		{
@@ -272,55 +283,69 @@ namespace dae
 			enemy->AddComponent<TransformComponent>()->SetLocalPosition(spawnPixel.x, spawnPixel.y);
 
 			auto* render = enemy->AddComponent<RenderComponent>();
-			render->SetTexture("general_sprites.png");
 
 			auto* animator = enemy->AddComponent<SpriteAnimatorComponent>();
 			animator->SetRenderSize(cellSize, cellSize);
 
 			if (spawn.type == EnemySpawn::Type::Pooka)
 			{
-				// Pooka — Row 4 (y=64): walk right×2, up×2, left×2, down×2, ghost×1
-				//          Row 5 (y=80): inflate stages 1, 2, 3
-				animator->AddAnimation("walk_right",
-					{ {0 * S, 4 * S, S, S}, {1 * S, 4 * S, S, S} }, 6.f);
-				animator->AddAnimation("walk_up",
-					{ {2 * S, 4 * S, S, S}, {3 * S, 4 * S, S, S} }, 6.f);
-				animator->AddAnimation("walk_left",
-					{ {4 * S, 4 * S, S, S}, {5 * S, 4 * S, S, S} }, 6.f);
-				animator->AddAnimation("walk_down",
-					{ {6 * S, 4 * S, S, S}, {7 * S, 4 * S, S, S} }, 6.f);
+				render->SetTexture("Enemy1Walk.png");
 
-				animator->AddAnimation("ghost",
-					{ {8 * S, 4 * S, S, S} }, 1.f);
+				// Walk right/left from Enemy1Walk.png
+				// Sheet: 46×30, 3 cols × 2 rows, 13×14 content per cell
+				// Column stride = 15 (13 + 2px gap), row stride = 15 (14 + 1px gap)
+				// Col starts: x=0, 15, 30  |  Row starts: y=0 (right), y=15 (left)
+				const std::string walkTex = "Enemy1Walk.png";
+				constexpr int ECS = 15; // cell stride
+				animator->AddAnimation("walk_right", walkTex,
+					{ {0, 0, EW, EH}, {ECS, 0, EW, EH}, {ECS * 2, 0, EW, EH} }, 6.f);
+				animator->AddAnimation("walk_left", walkTex,
+					{ {0, ECS, EW, EH}, {ECS, ECS, EW, EH}, {ECS * 2, ECS, EW, EH} }, 6.f);
 
-				animator->AddAnimation("inflate_1",
+				// No walk_up/walk_down — EnemyComponent calls Play("walk_up/down") which
+				// silently no-ops, so the last horizontal animation keeps playing.
+
+				// Enemy1Ghost.png: 1 row × 2 columns, each frame 14×8, sheet 28×8
+				const std::string ghostTex = "Enemy1Ghost.png";
+				constexpr int GW = 14;
+				constexpr int GH = 8;
+				animator->AddAnimation("ghost", ghostTex,
+					{ {0, 0, GW, GH}, {GW, 0, GW, GH} }, 6.f);
+				animator->SetAnimationRenderSize("ghost", cellSize * 0.6f, cellSize * 0.6f);
+
+				const std::string genTex = "general_sprites.png";
+
+				animator->AddAnimation("inflate_1", genTex,
 					{ {0 * S, 5 * S, S, S} }, 1.f, false);
-				animator->AddAnimation("inflate_2",
+				animator->AddAnimation("inflate_2", genTex,
 					{ {1 * S, 5 * S, S, S} }, 1.f, false);
-				animator->AddAnimation("inflate_3",
+				animator->AddAnimation("inflate_3", genTex,
 					{ {2 * S, 5 * S, S, S} }, 1.f, false);
 			}
 			else // Fygar
 			{
+				render->SetTexture("general_sprites.png");
+
 				// Fygar — Row 6 (y=96): walk right×2, up×2, left×2, down×2, ghost×1
 				//          Row 7 (y=112): inflate stages 1, 2, 3
-				animator->AddAnimation("walk_right",
+				const std::string genTex = "general_sprites.png";
+				animator->AddAnimation("walk_right", genTex,
 					{ {0 * S, 6 * S, S, S}, {1 * S, 6 * S, S, S} }, 6.f);
-				animator->AddAnimation("walk_up",
+				animator->AddAnimation("walk_up", genTex,
 					{ {2 * S, 6 * S, S, S}, {3 * S, 6 * S, S, S} }, 6.f);
-				animator->AddAnimation("walk_left",
+				animator->AddAnimation("walk_left", genTex,
 					{ {4 * S, 6 * S, S, S}, {5 * S, 6 * S, S, S} }, 6.f);
-				animator->AddAnimation("walk_down",
+				animator->AddAnimation("walk_down", genTex,
 					{ {6 * S, 6 * S, S, S}, {7 * S, 6 * S, S, S} }, 6.f);
 
-				animator->AddAnimation("ghost",
+				animator->AddAnimation("ghost", genTex,
 					{ {8 * S, 6 * S, S, S} }, 1.f);
 
-				animator->AddAnimation("inflate_1",
+				animator->AddAnimation("inflate_1", genTex,
 					{ {0 * S, 7 * S, S, S} }, 1.f, false);
-				animator->AddAnimation("inflate_2",
+				animator->AddAnimation("inflate_2", genTex,
 					{ {1 * S, 7 * S, S, S} }, 1.f, false);
-				animator->AddAnimation("inflate_3",
+				animator->AddAnimation("inflate_3", genTex,
 					{ {2 * S, 7 * S, S, S} }, 1.f, false);
 			}
 

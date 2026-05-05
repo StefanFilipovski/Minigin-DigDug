@@ -86,6 +86,16 @@ namespace dae
 		m_renderHeight = h;
 	}
 
+	void SpriteAnimatorComponent::SetAnimationRenderSize(const std::string& name, float w, float h)
+	{
+		auto it = m_animations.find(name);
+		if (it != m_animations.end())
+		{
+			it->second.renderW = w;
+			it->second.renderH = h;
+		}
+	}
+
 	void SpriteAnimatorComponent::ApplyFrame()
 	{
 		if (!m_pRender)
@@ -106,6 +116,9 @@ namespace dae
 
 		const auto& frame = anim.frames[m_currentFrame];
 		m_pRender->SetSourceRect(frame.x, frame.y, frame.w, frame.h);
-		m_pRender->SetRenderSize(m_renderWidth, m_renderHeight);
+
+		float rw = (anim.renderW > 0.f) ? anim.renderW : m_renderWidth;
+		float rh = (anim.renderH > 0.f) ? anim.renderH : m_renderHeight;
+		m_pRender->SetRenderSize(rw, rh);
 	}
 }

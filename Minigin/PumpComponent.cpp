@@ -17,7 +17,7 @@ namespace dae
 		, m_pGrid(pGrid)
 	{
 		// Red background gets keyed out so the rope renders cleanly
-		SDL_Color redKey{ 255, 0, 0, 255 };
+		SDL_Color redKey{ 108, 7, 0, 255 };
 		m_hoseTexture = ResourceManager::GetInstance().LoadTexture("PumpString.png", redKey);
 
 		// Native sprite is 32×6 (right-facing). Scale it to grid cell size:
