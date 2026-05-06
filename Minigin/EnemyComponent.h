@@ -1,8 +1,11 @@
 #pragma once
 #include "Component.h"
 #include "Subject.h"
+#include "EnemyStates.h"
+#include "EventIds.h"
 #include <glm/glm.hpp>
 #include <string>
+#include <memory>
 
 namespace dae
 {
@@ -17,15 +20,6 @@ namespace dae
 		Fygar
 	};
 
-	enum class EnemyState
-	{
-		Normal,      // Moving through tunnels, chasing player
-		Ghost,       // Passing through dirt toward player
-		Inflating,   // Being pumped by player (4 stages)
-		Popped,      // Fully inflated — about to be destroyed
-		Crushed      // Hit by a rock
-	};
-
 	class EnemyComponent final : public Component, public Subject
 	{
 	public:
@@ -36,11 +30,11 @@ namespace dae
 		void FixedUpdate(float fixedTimeStep) override;
 
 		EnemyType GetEnemyType() const { return m_type; }
-		EnemyState GetState() const { return m_state; }
+		EnemyStateType GetStateType() const;
 
 		void StartInflating(const glm::ivec2& attackDir = { -1, 0 });
 		void PumpOnce();
-		bool IsInflating() const { return m_state == EnemyState::Inflating; }
+		bool IsInflating() const;
 
 		void Crush();
 
@@ -52,46 +46,55 @@ namespace dae
 
 		bool IsAlive() const;
 
-	private:
-		void UpdateNormal(float deltaTime);
-		void UpdateGhost(float deltaTime);
-		void UpdateInflating(float deltaTime);
+		// --- Accessors used by state classes ---
+		GridMovementComponent* GetMovement() const;
+		SpriteAnimatorComponent* GetAnimator() const;
+		GridComponent* GetGrid() const { return m_pGrid; }
+		GameObject* GetTarget() const { return m_pTarget; }
+
+		const std::string& GetLastHorizontalAnim() const { return m_lastHorizontalAnim; }
+		void SetLastHorizontalAnim(const std::string& anim) { m_lastHorizontalAnim = anim; }
 
 		glm::ivec2 ChooseDirection() const;
 		glm::ivec2 ChooseGhostDirection() const;
-
-		void EnterGhostMode();
-		void ExitGhostMode();
 		bool ShouldBecomeGhost() const;
 		bool IsInTunnel() const;
 
+		float GetDirChangeInterval() const { return m_dirChangeInterval; }
+		float GetGhostDuration() const { return m_ghostDuration; }
+		float GetMinGhostInterval() const { return m_minGhostInterval; }
+		float GetMaxGhostInterval() const { return m_maxGhostInterval; }
+		float GetDeflateTime() const { return m_deflateTime; }
+		int GetMaxInflateStages() const { return MaxInflateStages; }
+
+		void ChangeState(std::unique_ptr<EnemyState> newState);
+
+		// Public wrapper so state classes can notify observers
+		void Notify(EventId event, GameObject* pGameObject);
+
+
+	private:
 		GridComponent* m_pGrid;
 		mutable GridMovementComponent* m_pMovement{ nullptr };
 		mutable SpriteAnimatorComponent* m_pAnimator{ nullptr };
 		mutable bool m_cached{ false };
 
 		EnemyType m_type;
-		EnemyState m_state{ EnemyState::Normal };
-		GameObject* m_pTarget; // The player to chase
+		GameObject* m_pTarget;
 
-		// Ghost mode
-		float m_ghostTimer{ 0.f };
-		float m_ghostCooldown{ 0.f };
-		float m_minGhostInterval{ 5.f };   // Min seconds between ghost attempts
-		float m_maxGhostInterval{ 12.f };   // Max seconds
-		float m_ghostDuration{ 8.f };       // Max time in ghost mode
+		std::unique_ptr<EnemyState> m_pCurrentState;
+		bool m_stateInitialized{ false };
 
-		// Inflating
-		int m_inflateStage{ 0 };            // 0-3, pops at 4
 		static constexpr int MaxInflateStages{ 5 };
-		float m_deflateTimer{ 0.f };
-		float m_deflateTime{ 1.5f };        // Seconds before deflating one stage
 
-		// AI direction change
-		float m_dirChangeTimer{ 0.f };
-		float m_dirChangeInterval{ 0.3f };  // How often to reconsider direction
+		// Settings
+		float m_minGhostInterval{ 5.f };
+		float m_maxGhostInterval{ 12.f };
+		float m_ghostDuration{ 8.f };
+		float m_deflateTime{ 1.5f };
+		float m_dirChangeInterval{ 0.3f };
 
-		std::string m_lastHorizontalAnim{ "walk_right" }; // Reused when moving vertically
+		std::string m_lastHorizontalAnim{ "walk_right" };
 
 		void CacheComponents() const;
 	};

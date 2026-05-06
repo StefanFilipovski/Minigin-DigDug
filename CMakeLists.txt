@@ -86,7 +86,7 @@ add_executable(${TARGET_NAME} ${TARGET_PARAM}
   Minigin/HighScoreState.cpp
   Minigin/LevelLoader.h
   Minigin/LevelLoader.cpp
- "Minigin/GridComponent.h" "Minigin/GridComponent.cpp" "Minigin/GridMovementComponent.h" "Minigin/GridMovementComponent.cpp" "Minigin/GridMoveCommand.h" "Minigin/SpriteAnimatorComponent.cpp" "Minigin/SpriteAnimatorComponent.h" "Minigin/PlayerAnimController.h" "Minigin/PlayerAnimController.cpp" "Minigin/PumpComponent.h" "Minigin/PumpComponent.cpp" "Minigin/PumpCommand.h" "Minigin/EnemyComponent.h" "Minigin/EnemyComponent.cpp" "Minigin/PlayerCollisionComponent.h" "Minigin/PlayerCollisionComponent.cpp")
+ "Minigin/GridComponent.h" "Minigin/GridComponent.cpp" "Minigin/GridMovementComponent.h" "Minigin/GridMovementComponent.cpp" "Minigin/GridMoveCommand.h" "Minigin/SpriteAnimatorComponent.cpp" "Minigin/SpriteAnimatorComponent.h" "Minigin/PlayerAnimController.h" "Minigin/PlayerAnimController.cpp" "Minigin/PumpComponent.h" "Minigin/PumpComponent.cpp" "Minigin/PumpCommand.h" "Minigin/EnemyComponent.h" "Minigin/EnemyComponent.cpp" "Minigin/EnemyStates.h" "Minigin/EnemyStates.cpp" "Minigin/PlayerCollisionComponent.h" "Minigin/PlayerCollisionComponent.cpp")
 
 # enable c++20 features
 target_compile_features(${TARGET_NAME} PUBLIC cxx_std_20)
