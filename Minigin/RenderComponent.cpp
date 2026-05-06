@@ -2,6 +2,7 @@
 #include "TransformComponent.h"
 #include "ResourceManager.h"
 #include "Renderer.h"
+#include "Texture2D.h"
 #include "GameObject.h"
 
 namespace dae
@@ -15,7 +16,36 @@ namespace dae
 
 		const auto& pos = transform->GetWorldPosition();
 
-		if (m_useSourceRect)
+		if (m_flipH)
+		{
+			// Use SDL_RenderTextureRotated with FLIP_HORIZONTAL
+			auto* sdlRenderer = Renderer::GetInstance().GetSDLRenderer();
+			auto* sdlTexture = m_Texture->GetSDLTexture();
+
+			float dstW{}, dstH{};
+			const SDL_FRect* pSrc = nullptr;
+
+			if (m_useSourceRect)
+			{
+				pSrc = &m_sourceRect;
+				dstW = m_useRenderSize ? m_renderWidth : m_sourceRect.w;
+				dstH = m_useRenderSize ? m_renderHeight : m_sourceRect.h;
+			}
+			else if (m_useRenderSize)
+			{
+				dstW = m_renderWidth;
+				dstH = m_renderHeight;
+			}
+			else
+			{
+				SDL_GetTextureSize(sdlTexture, &dstW, &dstH);
+			}
+
+			SDL_FRect dst{ pos.x, pos.y, dstW, dstH };
+			SDL_RenderTextureRotated(sdlRenderer, sdlTexture,
+				pSrc, &dst, 0.0, nullptr, SDL_FLIP_HORIZONTAL);
+		}
+		else if (m_useSourceRect)
 		{
 			Renderer::GetInstance().RenderTexture(*m_Texture, pos.x, pos.y,
 				m_sourceRect,

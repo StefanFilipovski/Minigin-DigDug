@@ -2,6 +2,7 @@
 #include "GridComponent.h"
 #include "GridMovementComponent.h"
 #include "SpriteAnimatorComponent.h"
+#include "EnemyComponent.h"
 #include "RenderComponent.h"
 #include "TransformComponent.h"
 #include "Renderer.h"
@@ -36,10 +37,33 @@ namespace dae
 		m_cached = true;
 	}
 
+	void PumpComponent::AddEnemy(GameObject* pEnemy)
+	{
+		m_enemies.push_back(pEnemy);
+	}
+
+	void PumpComponent::ClearEnemies()
+	{
+		m_enemies.clear();
+		m_pLatchedEnemyGO = nullptr;
+	}
+
 	void PumpComponent::Fire()
 	{
 		CacheComponents();
 		if (!m_pMovement) return;
+
+		// While latched onto an enemy, each Fire() press inflates it one stage
+		if (m_state == PumpState::Latched)
+		{
+			if (m_pLatchedEnemyGO && !m_pLatchedEnemyGO->IsMarkedForDestroy())
+			{
+				auto* enemy = m_pLatchedEnemyGO->GetComponent<EnemyComponent>();
+				if (enemy) enemy->PumpOnce();
+			}
+			return;
+		}
+
 		if (m_pMovement->IsMoving()) return;
 
 		if (m_state == PumpState::Idle)
@@ -67,6 +91,16 @@ namespace dae
 	{
 		CacheComponents();
 
+		// Prune enemies destroyed last frame so we never chase dangling pointers.
+		// Safe here because Scene::Update() calls all object Updates before freeing marked objects.
+		m_enemies.erase(
+			std::remove_if(m_enemies.begin(), m_enemies.end(),
+				[](const GameObject* go) { return !go || go->IsMarkedForDestroy(); }),
+			m_enemies.end());
+
+		if (m_pLatchedEnemyGO && m_pLatchedEnemyGO->IsMarkedForDestroy())
+			m_pLatchedEnemyGO = nullptr;
+
 		switch (m_state)
 		{
 		case PumpState::Idle:
@@ -76,7 +110,36 @@ namespace dae
 		{
 			m_hoseLength += m_extendSpeed * deltaTime;
 
-			if (m_hoseLength >= static_cast<float>(m_currentRange))
+			// Check every cell the hose tip has reached for an enemy
+			if (m_pMovement)
+			{
+				const auto& playerPos = m_pMovement->GetGridPosition();
+				int tipCell = static_cast<int>(std::ceil(m_hoseLength));
+				tipCell = std::min(tipCell, m_currentRange);
+
+				for (int i = 1; i <= tipCell && m_state == PumpState::Extending; ++i)
+				{
+					glm::ivec2 checkPos = playerPos + m_fireDirection * i;
+
+					for (auto* pEnemyGO : m_enemies)
+					{
+						auto* enemy = pEnemyGO->GetComponent<EnemyComponent>();
+						if (!enemy || !enemy->IsAlive() || enemy->IsInflating()) continue;
+
+						if (enemy->GetGridPosition() == checkPos)
+						{
+							m_pLatchedEnemyGO = pEnemyGO;
+							m_hoseLength = static_cast<float>(i);
+							m_state = PumpState::Latched;
+							enemy->StartInflating(m_fireDirection);
+							break;
+						}
+					}
+				}
+			}
+
+			if (m_state == PumpState::Extending &&
+				m_hoseLength >= static_cast<float>(m_currentRange))
 			{
 				m_hoseLength = static_cast<float>(m_currentRange);
 				m_state = PumpState::Retracting;
@@ -86,7 +149,23 @@ namespace dae
 		}
 
 		case PumpState::Latched:
+		{
+			// Release if the enemy died, was destroyed, or deflated back to normal
+			bool shouldRelease = !m_pLatchedEnemyGO;
+			if (!shouldRelease)
+			{
+				auto* enemy = m_pLatchedEnemyGO->GetComponent<EnemyComponent>();
+				shouldRelease = !enemy || !enemy->IsAlive() || !enemy->IsInflating();
+			}
+
+			if (shouldRelease)
+			{
+				m_pLatchedEnemyGO = nullptr;
+				m_state = PumpState::Retracting;
+				m_retractTimer = 0.f;
+			}
 			break;
+		}
 
 		case PumpState::Retracting:
 		{

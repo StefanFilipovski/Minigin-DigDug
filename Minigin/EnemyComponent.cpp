@@ -6,6 +6,7 @@
 #include "TransformComponent.h"
 #include "EventIds.h"
 #include "GameObject.h"
+#include <string>
 #include <cstdlib>
 #include <cmath>
 #include <algorithm>
@@ -149,6 +150,10 @@ namespace dae
 				m_inflateStage = 0;
 				m_state = EnemyState::Normal;
 
+				// Reset flip from inflate pose
+				auto* render = GetOwner()->GetComponent<RenderComponent>();
+				if (render) render->SetFlipHorizontal(false);
+
 				if (m_pAnimator)
 					m_pAnimator->Play(m_lastHorizontalAnim);
 
@@ -163,7 +168,7 @@ namespace dae
 		}
 	}
 
-	void EnemyComponent::StartInflating()
+	void EnemyComponent::StartInflating(const glm::ivec2& attackDir)
 	{
 		if (m_state == EnemyState::Popped || m_state == EnemyState::Crushed)
 			return;
@@ -173,6 +178,11 @@ namespace dae
 		m_deflateTimer = 0.f;
 
 		m_pMovement->SetDesiredDirection({ 0, 0 });
+
+		// Sprites face left by default — flip when attacked from the right
+		auto* render = GetOwner()->GetComponent<RenderComponent>();
+		if (render)
+			render->SetFlipHorizontal(attackDir.x > 0);
 
 		if (m_pAnimator)
 			m_pAnimator->Play("inflate_1");

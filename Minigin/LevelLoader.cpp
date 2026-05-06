@@ -116,7 +116,7 @@ namespace dae
 		CreateRocks(scene, result.pGrid, data);
 		CreateHUD(scene, mode);
 
-		// Wire up collision: tell the player about all enemies
+		// Wire up collision and pump — both need the full enemy list
 		if (result.pPlayer1)
 		{
 			auto* collision = result.pPlayer1->GetComponent<PlayerCollisionComponent>();
@@ -125,6 +125,13 @@ namespace dae
 				collision->SetSpawnPos(data.playerSpawn);
 				for (auto* enemy : result.enemies)
 					collision->AddEnemy(enemy);
+			}
+
+			auto* pump = result.pPlayer1->GetComponent<PumpComponent>();
+			if (pump)
+			{
+				for (auto* enemy : result.enemies)
+					pump->AddEnemy(enemy);
 			}
 		}
 
@@ -267,6 +274,10 @@ namespace dae
 		SDL_Color redKey{ 108, 7, 0, 255 };
 		ResourceManager::GetInstance().LoadTexture("Enemy1Walk.png", redKey);
 		ResourceManager::GetInstance().LoadTexture("Enemy1Ghost.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("Enemy1Explode1.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("Enemy1Explode2.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("Enemy1Explode3.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("Enemy1Explode4.png", redKey);
 
 		// Enemy1Walk.png layout: 2 rows × 3 columns, each frame 13×14 px
 		//   Row 0 (y=0):  walk right — frames at x=0, 13, 26
@@ -313,14 +324,17 @@ namespace dae
 					{ {0, 0, GW, GH}, {GW, 0, GW, GH} }, 6.f);
 				animator->SetAnimationRenderSize("ghost", cellSize * 0.6f, cellSize * 0.6f);
 
-				const std::string genTex = "general_sprites.png";
-
-				animator->AddAnimation("inflate_1", genTex,
-					{ {0 * S, 5 * S, S, S} }, 1.f, false);
-				animator->AddAnimation("inflate_2", genTex,
-					{ {1 * S, 5 * S, S, S} }, 1.f, false);
-				animator->AddAnimation("inflate_3", genTex,
-					{ {2 * S, 5 * S, S, S} }, 1.f, false);
+				// Inflate stages — one sprite per file, faces left by default.
+				// EnemyComponent flips horizontally when attacked from the right.
+				// Sizes: 14×14, 20×16, 21×20, 25×20
+				animator->AddAnimation("inflate_1", std::string("Enemy1Explode1.png"),
+					{ {0, 0, 14, 14} }, 1.f, false);
+				animator->AddAnimation("inflate_2", std::string("Enemy1Explode2.png"),
+					{ {0, 0, 20, 16} }, 1.f, false);
+				animator->AddAnimation("inflate_3", std::string("Enemy1Explode3.png"),
+					{ {0, 0, 21, 20} }, 1.f, false);
+				animator->AddAnimation("inflate_4", std::string("Enemy1Explode4.png"),
+					{ {0, 0, 25, 20} }, 1.f, false);
 			}
 			else // Fygar
 			{
@@ -347,12 +361,14 @@ namespace dae
 					{ {1 * S, 7 * S, S, S} }, 1.f, false);
 				animator->AddAnimation("inflate_3", genTex,
 					{ {2 * S, 7 * S, S, S} }, 1.f, false);
+				animator->AddAnimation("inflate_4", genTex,
+					{ {2 * S, 7 * S, S, S} }, 1.f, false);
 			}
 
 			animator->Play("walk_right");
 
 			// canDig = false — enemies move through tunnels only
-			float enemySpeed = (spawn.type == EnemySpawn::Type::Pooka) ? 3.5f : 3.0f;
+			float enemySpeed = (spawn.type == EnemySpawn::Type::Pooka) ? 2.5f : 2.0f;
 			auto* movement = enemy->AddComponent<GridMovementComponent>(pGrid, enemySpeed, false);
 			movement->SetGridPosition(spawn.gridX, spawn.gridY);
 

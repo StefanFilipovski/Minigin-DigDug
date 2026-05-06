@@ -1,6 +1,7 @@
 #pragma once
 #include "Component.h"
 #include <memory>
+#include <vector>
 #include <SDL3/SDL.h>
 #include "../out/build/x64-debug/_deps/glm-src/glm/ext/vector_int2.hpp"
 
@@ -9,6 +10,7 @@ namespace dae
 	class GridComponent;
 	class GridMovementComponent;
 	class SpriteAnimatorComponent;
+	class EnemyComponent;
 	class RenderComponent;
 	class Texture2D;
 	class GameObject;
@@ -23,6 +25,9 @@ namespace dae
 
 		// Called by the pump command (button press)
 		void Fire();
+
+		void AddEnemy(GameObject* pEnemy);
+		void ClearEnemies();
 
 		bool IsFiring() const { return m_state != PumpState::Idle; }
 		bool IsLatched() const { return m_state == PumpState::Latched; }
@@ -42,6 +47,9 @@ namespace dae
 		GridMovementComponent* m_pMovement{ nullptr };
 		SpriteAnimatorComponent* m_pAnimator{ nullptr };
 		bool m_cached{ false };
+
+		std::vector<GameObject*> m_enemies;
+		GameObject* m_pLatchedEnemyGO{ nullptr };
 
 		PumpState m_state{ PumpState::Idle };
 		glm::ivec2 m_fireDirection{ 0, 0 };

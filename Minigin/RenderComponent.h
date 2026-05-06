@@ -27,6 +27,9 @@ namespace dae
 		void SetRenderSize(float w, float h);
 		void ClearRenderSize();
 
+		void SetFlipHorizontal(bool flip) { m_flipH = flip; }
+		bool GetFlipHorizontal() const { return m_flipH; }
+
 	private:
 		std::shared_ptr<Texture2D> m_Texture{};
 
@@ -36,5 +39,6 @@ namespace dae
 		float m_renderWidth{ 0.f };
 		float m_renderHeight{ 0.f };
 		bool m_useRenderSize{ false };
+		bool m_flipH{ false };
 	};
 }

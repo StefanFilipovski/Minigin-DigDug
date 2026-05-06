@@ -38,7 +38,7 @@ namespace dae
 		EnemyType GetEnemyType() const { return m_type; }
 		EnemyState GetState() const { return m_state; }
 
-		void StartInflating();
+		void StartInflating(const glm::ivec2& attackDir = { -1, 0 });
 		void PumpOnce();
 		bool IsInflating() const { return m_state == EnemyState::Inflating; }
 
@@ -83,7 +83,7 @@ namespace dae
 
 		// Inflating
 		int m_inflateStage{ 0 };            // 0-3, pops at 4
-		static constexpr int MaxInflateStages{ 4 };
+		static constexpr int MaxInflateStages{ 5 };
 		float m_deflateTimer{ 0.f };
 		float m_deflateTime{ 1.5f };        // Seconds before deflating one stage
 

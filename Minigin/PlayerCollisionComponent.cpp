@@ -1,5 +1,6 @@
 #include "PlayerCollisionComponent.h"
 #include "GridMovementComponent.h"
+#include <algorithm>
 #include "GridComponent.h"
 #include "EnemyComponent.h"
 #include "RenderComponent.h"
@@ -23,6 +24,12 @@ namespace dae
 		}
 
 		if (!m_pMovement) return;
+
+		// Prune enemies destroyed last frame (prevents dangling pointers)
+		m_enemies.erase(
+			std::remove_if(m_enemies.begin(), m_enemies.end(),
+				[](const GameObject* go) { return !go || go->IsMarkedForDestroy(); }),
+			m_enemies.end());
 
 		// If dead, count down respawn timer
 		if (m_dead)
