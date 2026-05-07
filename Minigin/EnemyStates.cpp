@@ -18,6 +18,14 @@ namespace dae
 			static_cast<float>(std::rand() % 100) / 100.f *
 			(enemy.GetMaxGhostInterval() - enemy.GetMinGhostInterval());
 
+		// Randomize fire cooldown for Fygar
+		if (enemy.GetEnemyType() == EnemyType::Fygar)
+		{
+			m_fireCooldown = enemy.GetMinFireInterval() +
+				static_cast<float>(std::rand() % 100) / 100.f *
+				(enemy.GetMaxFireInterval() - enemy.GetMinFireInterval());
+		}
+
 		m_dirChangeTimer = 0.f;
 
 		auto* animator = enemy.GetAnimator();
@@ -65,6 +73,18 @@ namespace dae
 		if (m_ghostCooldown <= 0.f && enemy.ShouldBecomeGhost())
 		{
 			enemy.ChangeState(std::make_unique<EnemyGhostState>());
+			return;
+		}
+
+		// Fire transition (Fygar only)
+		if (enemy.GetEnemyType() == EnemyType::Fygar)
+		{
+			m_fireCooldown -= deltaTime;
+			if (m_fireCooldown <= 0.f)
+			{
+				enemy.ChangeState(std::make_unique<EnemyFireBreathingState>());
+				return;
+			}
 		}
 	}
 
@@ -93,23 +113,7 @@ namespace dae
 
 		m_ghostTimer += deltaTime;
 
-		// After max duration, wait until tunnel
-		if (m_ghostTimer >= enemy.GetGhostDuration())
-		{
-			if (enemy.IsInTunnel())
-			{
-				enemy.ChangeState(std::make_unique<EnemyNormalState>());
-				return;
-			}
-		}
-
-		// Small delay avoids exiting immediately after entering
-		if (enemy.IsInTunnel() && m_ghostTimer > 1.f)
-		{
-			enemy.ChangeState(std::make_unique<EnemyNormalState>());
-			return;
-		}
-
+		// Move toward the player while in ghost form
 		m_dirChangeTimer += deltaTime;
 		if (m_dirChangeTimer >= enemy.GetDirChangeInterval())
 		{
@@ -125,6 +129,13 @@ namespace dae
 		if (movement->IsMoving())
 		{
 			movement->SetDesiredDirection(movement->GetCurrentDirection());
+		}
+
+		// Only exit ghost mode after duration expires and on a tunnel/surface cell
+		if (m_ghostTimer >= enemy.GetGhostDuration() && enemy.IsInTunnel())
+		{
+			enemy.ChangeState(std::make_unique<EnemyNormalState>());
+			return;
 		}
 	}
 
@@ -236,6 +247,49 @@ namespace dae
 	}
 
 	void EnemyCrushedState::Exit(EnemyComponent& /*enemy*/)
+	{
+	}
+
+	// FireBreathingState (Fygar only)
+
+	void EnemyFireBreathingState::Enter(EnemyComponent& enemy)
+	{
+		m_fireTimer = 0.f;
+		m_extendTimer = 0.f;
+		m_currentRange = 0;
+
+		auto* movement = enemy.GetMovement();
+		if (movement) movement->SetDesiredDirection({ 0, 0 });
+
+		// Fire goes in the direction the Fygar is facing (horizontal only)
+		const std::string& lastAnim = enemy.GetLastHorizontalAnim();
+		m_fireDirection = (lastAnim == "walk_left") ? glm::ivec2{ -1, 0 } : glm::ivec2{ 1, 0 };
+
+		auto* animator = enemy.GetAnimator();
+		if (animator) animator->Play(lastAnim);
+	}
+
+	void EnemyFireBreathingState::Update(EnemyComponent& enemy, float deltaTime)
+	{
+		m_fireTimer += deltaTime;
+
+		// Extend fire range over time
+		m_extendTimer += deltaTime;
+		if (m_extendTimer >= m_extendInterval && m_currentRange < m_maxFireRange)
+		{
+			m_extendTimer = 0.f;
+			++m_currentRange;
+		}
+
+		// Done breathing fire
+		if (m_fireTimer >= m_fireDuration)
+		{
+			enemy.ChangeState(std::make_unique<EnemyNormalState>());
+			return;
+		}
+	}
+
+	void EnemyFireBreathingState::Exit(EnemyComponent& /*enemy*/)
 	{
 	}
 }

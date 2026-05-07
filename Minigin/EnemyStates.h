@@ -11,7 +11,8 @@ namespace dae
 		Ghost,
 		Inflating,
 		Popped,
-		Crushed
+		Crushed,
+		FireBreathing
 	};
 
 	// Base class State Pattern
@@ -39,6 +40,7 @@ namespace dae
 	private:
 		float m_dirChangeTimer{ 0.f };
 		float m_ghostCooldown{ 0.f };
+		float m_fireCooldown{ 0.f };
 	};
 
 	class EnemyGhostState final : public EnemyState
@@ -89,5 +91,26 @@ namespace dae
 		void Update(EnemyComponent& enemy, float deltaTime) override;
 		void Exit(EnemyComponent& enemy) override;
 		EnemyStateType GetType() const override { return EnemyStateType::Crushed; }
+	};
+
+	class EnemyFireBreathingState final : public EnemyState
+	{
+	public:
+		void Enter(EnemyComponent& enemy) override;
+		void Update(EnemyComponent& enemy, float deltaTime) override;
+		void Exit(EnemyComponent& enemy) override;
+		EnemyStateType GetType() const override { return EnemyStateType::FireBreathing; }
+
+		const glm::ivec2& GetFireDirection() const { return m_fireDirection; }
+		int GetCurrentFireRange() const { return m_currentRange; }
+
+	private:
+		glm::ivec2 m_fireDirection{ 1, 0 };
+		float m_fireTimer{ 0.f };
+		float m_fireDuration{ 1.2f };
+		int m_maxFireRange{ 3 };
+		int m_currentRange{ 0 };
+		float m_extendTimer{ 0.f };
+		float m_extendInterval{ 0.25f };
 	};
 }

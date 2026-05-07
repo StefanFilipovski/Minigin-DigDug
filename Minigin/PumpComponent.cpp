@@ -124,7 +124,8 @@ namespace dae
 					for (auto* pEnemyGO : m_enemies)
 					{
 						auto* enemy = pEnemyGO->GetComponent<EnemyComponent>();
-						if (!enemy || !enemy->IsAlive() || enemy->IsInflating()) continue;
+						if (!enemy || !enemy->IsAlive() || enemy->IsInflating()
+							|| enemy->IsGhost()) continue;
 
 						if (enemy->GetGridPosition() == checkPos)
 						{

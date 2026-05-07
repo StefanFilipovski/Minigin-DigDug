@@ -5,6 +5,9 @@
 #include "SpriteAnimatorComponent.h"
 #include "RenderComponent.h"
 #include "TransformComponent.h"
+#include "ResourceManager.h"
+#include "Renderer.h"
+#include "Texture2D.h"
 #include "EventIds.h"
 #include "GameObject.h"
 #include <string>
@@ -23,7 +26,12 @@ namespace dae
 	{
 		auto initialState = std::make_unique<EnemyNormalState>();
 		m_pCurrentState = std::move(initialState);
-		// Enter is called after components are ready (first Update)
+
+		if (m_type == EnemyType::Fygar)
+		{
+			SDL_Color redKey{ 108, 7, 0, 255 };
+			m_fireTexture = ResourceManager::GetInstance().LoadTexture("Enemy2Fire.png", redKey);
+		}
 	}
 
 	void EnemyComponent::CacheComponents() const
@@ -90,10 +98,96 @@ namespace dae
 		return GetStateType() == EnemyStateType::Inflating;
 	}
 
+	bool EnemyComponent::IsGhost() const
+	{
+		return GetStateType() == EnemyStateType::Ghost;
+	}
+
+	bool EnemyComponent::IsFireBreathing() const
+	{
+		return GetStateType() == EnemyStateType::FireBreathing;
+	}
+
+	bool EnemyComponent::IsPositionInFire(const glm::ivec2& pos) const
+	{
+		if (!IsFireBreathing()) return false;
+
+		auto* fireState = dynamic_cast<const EnemyFireBreathingState*>(m_pCurrentState.get());
+		if (!fireState) return false;
+
+		const auto& myPos = GetGridPosition();
+		const glm::ivec2& fireDir = fireState->GetFireDirection();
+		int range = fireState->GetCurrentFireRange();
+
+		for (int i = 1; i <= range; ++i)
+		{
+			if (myPos + fireDir * i == pos)
+				return true;
+		}
+		return false;
+	}
+
+	void EnemyComponent::Render() const
+	{
+		if (IsFireBreathing())
+			RenderFire();
+	}
+
+	void EnemyComponent::RenderFire() const
+	{
+		if (!m_fireTexture) return;
+
+		auto* fireState = dynamic_cast<const EnemyFireBreathingState*>(m_pCurrentState.get());
+		if (!fireState || fireState->GetCurrentFireRange() <= 0) return;
+
+		auto* transform = GetOwner()->GetComponent<TransformComponent>();
+		if (!transform || !m_pGrid) return;
+
+		const auto& pos = transform->GetWorldPosition();
+		float cs = static_cast<float>(m_pGrid->GetCellSize());
+		const glm::ivec2& fireDir = fireState->GetFireDirection();
+		int range = fireState->GetCurrentFireRange();
+
+		auto* sdlRenderer = Renderer::GetInstance().GetSDLRenderer();
+		auto* sdlTexture = m_fireTexture->GetSDLTexture();
+
+		// Fire extends horizontally from the cell next to the Fygar
+		// Frame 1 (16x16) for the first cell, frame 2 (32x16) for the rest
+		bool facingLeft = (fireDir.x < 0);
+
+		for (int i = 1; i <= range; ++i)
+		{
+			SDL_FRect src;
+			float dstW;
+
+			if (i == 1)
+			{
+				// Small flame near the Fygar
+				src = { 0.f, 0.f, 16.f, 16.f };
+				dstW = cs;
+			}
+			else
+			{
+				// Larger flame further out
+				src = { 16.f, 0.f, 32.f, 16.f };
+				dstW = cs;
+			}
+
+			float fireX = pos.x + static_cast<float>(fireDir.x * i) * cs;
+			float fireY = pos.y;
+
+			SDL_FRect dst{ fireX, fireY, dstW, cs };
+			SDL_FlipMode flip = facingLeft ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
+			SDL_RenderTextureRotated(sdlRenderer, sdlTexture, &src, &dst, 0.0, nullptr, flip);
+		}
+	}
+
 	void EnemyComponent::StartInflating(const glm::ivec2& attackDir)
 	{
 		auto type = GetStateType();
 		if (type == EnemyStateType::Popped || type == EnemyStateType::Crushed)
+			return;
+		if (type == EnemyStateType::Ghost || type == EnemyStateType::FireBreathing)
 			return;
 
 		ChangeState(std::make_unique<EnemyInflatingState>(attackDir));

@@ -56,18 +56,21 @@ namespace dae
 			if (enemy->IsInflating()) continue;
 
 			// Grid collision — same cell
-			if (enemy->GetGridPosition() == myPos)
+			bool hit = (enemy->GetGridPosition() == myPos);
+
+			// Fire collision — check if player is in a Fygar's fire path
+			if (!hit && enemy->IsPositionInFire(myPos))
+				hit = true;
+
+			if (hit)
 			{
-				// Player dies
 				--m_lives;
 				m_dead = true;
 				m_respawnTimer = m_respawnDelay;
 
-				// Hide the player
 				auto* render = GetOwner()->GetComponent<RenderComponent>();
-				if (render) render->SetSourceRect(0, 0, 0, 0); // Hide
+				if (render) render->SetSourceRect(0, 0, 0, 0);
 
-				// Notify observers (for lives display, game over check)
 				NotifyObservers(EVENT_PLAYER_DIED, GetOwner());
 				return;
 			}

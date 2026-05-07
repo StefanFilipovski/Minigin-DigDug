@@ -279,6 +279,14 @@ namespace dae
 		ResourceManager::GetInstance().LoadTexture("Enemy1Explode3.png", redKey);
 		ResourceManager::GetInstance().LoadTexture("Enemy1Explode4.png", redKey);
 
+		ResourceManager::GetInstance().LoadTexture("Enemy2Walk.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("Enemy2Ghost.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("Enemy2Fire.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("Enemy2Explode1.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("Enemy2Explode2.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("Enemy2Explode3.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("Enemy2Explode4.png", redKey);
+
 		// Enemy1Walk.png layout: 2 rows × 3 columns, each frame 13×14 px
 		//   Row 0 (y=0):  walk right — frames at x=0, 13, 26
 		//   Row 1 (y=14): walk left  — frames at x=0, 13, 26
@@ -338,31 +346,36 @@ namespace dae
 			}
 			else // Fygar
 			{
-				render->SetTexture("general_sprites.png");
+				render->SetTexture("Enemy2Walk.png");
 
-				// Fygar — Row 6 (y=96): walk right×2, up×2, left×2, down×2, ghost×1
-				//          Row 7 (y=112): inflate stages 1, 2, 3
-				const std::string genTex = "general_sprites.png";
-				animator->AddAnimation("walk_right", genTex,
-					{ {0 * S, 6 * S, S, S}, {1 * S, 6 * S, S, S} }, 6.f);
-				animator->AddAnimation("walk_up", genTex,
-					{ {2 * S, 6 * S, S, S}, {3 * S, 6 * S, S, S} }, 6.f);
-				animator->AddAnimation("walk_left", genTex,
-					{ {4 * S, 6 * S, S, S}, {5 * S, 6 * S, S, S} }, 6.f);
-				animator->AddAnimation("walk_down", genTex,
-					{ {6 * S, 6 * S, S, S}, {7 * S, 6 * S, S, S} }, 6.f);
+				// Enemy2Walk.png: same layout as Pooka — 46×29, 2 rows × 3 columns
+				// Row 0: walk right, Row 1: walk left, stride 15
+				const std::string fWalkTex = "Enemy2Walk.png";
+				constexpr int ECS = 15;
+				animator->AddAnimation("walk_right", fWalkTex,
+					{ {0, 0, EW, EH}, {ECS, 0, EW, EH}, {ECS * 2, 0, EW, EH} }, 6.f);
+				animator->AddAnimation("walk_left", fWalkTex,
+					{ {0, ECS, EW, EH}, {ECS, ECS, EW, EH}, {ECS * 2, ECS, EW, EH} }, 6.f);
 
-				animator->AddAnimation("ghost", genTex,
-					{ {8 * S, 6 * S, S, S} }, 1.f);
+				// Enemy2Ghost.png: 1 row × 2 columns, each frame 14×11, sheet 29×11
+				const std::string fGhostTex = "Enemy2Ghost.png";
+				constexpr int FGW = 14;
+				constexpr int FGH = 11;
+				animator->AddAnimation("ghost", fGhostTex,
+					{ {0, 0, FGW, FGH}, {FGW + 1, 0, FGW, FGH} }, 6.f);
+				animator->SetAnimationRenderSize("ghost", cellSize * 0.6f, cellSize * 0.6f);
 
-				animator->AddAnimation("inflate_1", genTex,
-					{ {0 * S, 7 * S, S, S} }, 1.f, false);
-				animator->AddAnimation("inflate_2", genTex,
-					{ {1 * S, 7 * S, S, S} }, 1.f, false);
-				animator->AddAnimation("inflate_3", genTex,
-					{ {2 * S, 7 * S, S, S} }, 1.f, false);
-				animator->AddAnimation("inflate_4", genTex,
-					{ {2 * S, 7 * S, S, S} }, 1.f, false);
+				// Enemy2Fire.png is loaded separately for fire rendering in EnemyComponent
+
+				// Inflate stages from individual sheets, faces left by default
+				animator->AddAnimation("inflate_1", std::string("Enemy2Explode1.png"),
+					{ {0, 0, 15, 13} }, 1.f, false);
+				animator->AddAnimation("inflate_2", std::string("Enemy2Explode2.png"),
+					{ {0, 0, 20, 19} }, 1.f, false);
+				animator->AddAnimation("inflate_3", std::string("Enemy2Explode3.png"),
+					{ {0, 0, 20, 21} }, 1.f, false);
+				animator->AddAnimation("inflate_4", std::string("Enemy2Explode4.png"),
+					{ {0, 0, 24, 23} }, 1.f, false);
 			}
 
 			animator->Play("walk_right");
