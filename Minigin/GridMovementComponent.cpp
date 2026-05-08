@@ -109,6 +109,10 @@ namespace dae
 		if (!m_pGrid->IsInBounds(targetCell.x, targetCell.y))
 			return false;
 
+		// Block movement into sky rows above the playable area
+		if (targetCell.y < m_pGrid->GetMinPlayableRow())
+			return false;
+
 		if (m_isGhost)
 			return true;
 
@@ -117,6 +121,24 @@ namespace dae
 
 		const auto& cell = m_pGrid->GetCell(targetCell.x, targetCell.y);
 		return cell.IsPassableFrom(direction);
+	}
+
+	void GridMovementComponent::SnapToCurrentCell()
+	{
+		m_isMoving = false;
+		m_moveProgress = 0.f;
+		m_targetGridPos = m_gridPos;
+		m_desiredDirection = { 0, 0 };
+
+		if (m_pGrid)
+		{
+			m_pixelPos = m_pGrid->GridToPixel(m_gridPos.x, m_gridPos.y);
+			m_startPixel = m_pixelPos;
+			m_targetPixel = m_pixelPos;
+		}
+
+		if (m_pTransform)
+			m_pTransform->SetLocalPosition(m_pixelPos.x, m_pixelPos.y);
 	}
 
 	void GridMovementComponent::ArriveAtCell()

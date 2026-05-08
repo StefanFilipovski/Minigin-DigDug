@@ -33,6 +33,7 @@ namespace dae
 		bool IsLatched() const { return m_state == PumpState::Latched; }
 
 		void SetRange(int cells) { m_maxRange = cells; }
+		void ForceReset();
 
 	private:
 		enum class PumpState

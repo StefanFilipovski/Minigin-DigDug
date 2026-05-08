@@ -1,5 +1,6 @@
 #include "EnemyStates.h"
 #include "EnemyComponent.h"
+#include "GridComponent.h"
 #include "GridMovementComponent.h"
 #include "SpriteAnimatorComponent.h"
 #include "RenderComponent.h"
@@ -13,10 +14,9 @@ namespace dae
 	// NormalState
 	void EnemyNormalState::Enter(EnemyComponent& enemy)
 	{
-		// Randomize ghost cooldown each time we enter Normal
-		m_ghostCooldown = enemy.GetMinGhostInterval() +
-			static_cast<float>(std::rand() % 100) / 100.f *
-			(enemy.GetMaxGhostInterval() - enemy.GetMinGhostInterval());
+		// Only randomize ghost cooldown if not already counting
+		if (enemy.GetGhostCooldownRemaining() < 0.f)
+			enemy.RandomizeGhostCooldown();
 
 		// Randomize fire cooldown for Fygar
 		if (enemy.GetEnemyType() == EnemyType::Fygar)
@@ -25,8 +25,6 @@ namespace dae
 				static_cast<float>(std::rand() % 100) / 100.f *
 				(enemy.GetMaxFireInterval() - enemy.GetMinFireInterval());
 		}
-
-		m_dirChangeTimer = 0.f;
 
 		auto* animator = enemy.GetAnimator();
 		if (animator)
@@ -42,36 +40,29 @@ namespace dae
 		auto* animator = enemy.GetAnimator();
 		if (!movement) return;
 
-		m_dirChangeTimer += deltaTime;
-		if (m_dirChangeTimer >= enemy.GetDirChangeInterval())
+		// Pick direction at every cell — no chaining while moving
+		if (!movement->IsMoving())
 		{
-			m_dirChangeTimer = 0.f;
+			glm::ivec2 dir = enemy.ChooseDirection();
+			movement->SetDesiredDirection(dir);
 
-			if (!movement->IsMoving())
+			if (animator)
 			{
-				glm::ivec2 dir = enemy.ChooseDirection();
-				movement->SetDesiredDirection(dir);
-
-				if (animator)
-				{
-					if (dir.x > 0)      { enemy.SetLastHorizontalAnim("walk_right"); animator->Play("walk_right"); }
-					else if (dir.x < 0) { enemy.SetLastHorizontalAnim("walk_left");  animator->Play("walk_left"); }
-					else if (dir.y < 0) animator->Play("walk_up");
-					else if (dir.y > 0) animator->Play("walk_down");
-					animator->Resume();
-				}
+				if (dir.x > 0)      { enemy.SetLastHorizontalAnim("walk_right"); animator->Play("walk_right"); }
+				else if (dir.x < 0) { enemy.SetLastHorizontalAnim("walk_left");  animator->Play("walk_left"); }
+				else if (dir.y < 0) animator->Play("walk_up");
+				else if (dir.y > 0) animator->Play("walk_down");
+				animator->Resume();
 			}
 		}
 
-		if (movement->IsMoving())
+		// Ghost transition (cooldown persists across fire breathing)
+		float ghostCD = enemy.GetGhostCooldownRemaining();
+		ghostCD -= deltaTime;
+		enemy.SetGhostCooldownRemaining(ghostCD);
+		if (ghostCD <= 0.f && enemy.ShouldBecomeGhost())
 		{
-			movement->SetDesiredDirection(movement->GetCurrentDirection());
-		}
-
-		// Ghost transition
-		m_ghostCooldown -= deltaTime;
-		if (m_ghostCooldown <= 0.f && enemy.ShouldBecomeGhost())
-		{
+			enemy.SetGhostCooldownRemaining(-1.f);
 			enemy.ChangeState(std::make_unique<EnemyGhostState>());
 			return;
 		}
@@ -96,8 +87,7 @@ namespace dae
 
 	void EnemyGhostState::Enter(EnemyComponent& enemy)
 	{
-		m_ghostTimer = 0.f;
-		m_dirChangeTimer = 0.f;
+		m_hasBeenInDirt = false;
 
 		auto* movement = enemy.GetMovement();
 		if (movement) movement->SetGhostMode(true);
@@ -106,37 +96,63 @@ namespace dae
 		if (animator) animator->Play("ghost");
 	}
 
-	void EnemyGhostState::Update(EnemyComponent& enemy, float deltaTime)
+	void EnemyGhostState::Update(EnemyComponent& enemy, float /*deltaTime*/)
 	{
 		auto* movement = enemy.GetMovement();
 		if (!movement) return;
 
-		m_ghostTimer += deltaTime;
+		// Only act when stopped at a cell
+		// Do NOT set direction while moving — that causes FixedUpdate to chain
+		// the next move in the same direction before we can recalculate
+		if (movement->IsMoving()) return;
 
-		// Move toward the player while in ghost form
-		m_dirChangeTimer += deltaTime;
-		if (m_dirChangeTimer >= enemy.GetDirChangeInterval())
+		// Check current cell for exit conditions
+		auto* grid = enemy.GetGrid();
+		const auto& pos = movement->GetGridPosition();
+		if (grid)
 		{
-			m_dirChangeTimer = 0.f;
+			CellType cell = grid->GetCellType(pos.x, pos.y);
+			if (cell == CellType::Dirt)
+				m_hasBeenInDirt = true;
 
-			if (!movement->IsMoving())
+			// Exit ghost at a Tunnel cell after passing through dirt
+			if (m_hasBeenInDirt && cell == CellType::Tunnel)
 			{
-				glm::ivec2 dir = enemy.ChooseGhostDirection();
-				movement->SetDesiredDirection(dir);
+				enemy.ChangeState(std::make_unique<EnemyNormalState>());
+				return;
 			}
 		}
 
-		if (movement->IsMoving())
+		// Chase the player — prefer the axis with greater distance
+		auto* target = enemy.GetTarget();
+		if (!target) return;
+
+		auto* targetMovement = target->GetComponent<GridMovementComponent>();
+		if (!targetMovement) return;
+
+		const auto& targetPos = targetMovement->GetGridPosition();
+		glm::ivec2 diff = targetPos - pos;
+		glm::ivec2 dir{ 0, 0 };
+
+		if (std::abs(diff.x) >= std::abs(diff.y))
 		{
-			movement->SetDesiredDirection(movement->GetCurrentDirection());
+			if (diff.x != 0)
+				dir = { (diff.x > 0) ? 1 : -1, 0 };
+			else if (diff.y != 0)
+				dir = { 0, (diff.y > 0) ? 1 : -1 };
+		}
+		else
+		{
+			if (diff.y != 0)
+				dir = { 0, (diff.y > 0) ? 1 : -1 };
+			else if (diff.x != 0)
+				dir = { (diff.x > 0) ? 1 : -1, 0 };
 		}
 
-		// Only exit ghost mode after duration expires and on a tunnel/surface cell
-		if (m_ghostTimer >= enemy.GetGhostDuration() && enemy.IsInTunnel())
-		{
-			enemy.ChangeState(std::make_unique<EnemyNormalState>());
-			return;
-		}
+		if (dir == glm::ivec2{ 0, 0 })
+			dir = { 1, 0 };
+
+		movement->SetDesiredDirection(dir);
 	}
 
 	void EnemyGhostState::Exit(EnemyComponent& enemy)
@@ -158,7 +174,7 @@ namespace dae
 		m_deflateTimer = 0.f;
 
 		auto* movement = enemy.GetMovement();
-		if (movement) movement->SetDesiredDirection({ 0, 0 });
+		if (movement) movement->SnapToCurrentCell();
 
 		// Sprites face left by default — flip when attacked from the right
 		auto* render = enemy.GetOwner()->GetComponent<RenderComponent>();
@@ -259,7 +275,7 @@ namespace dae
 		m_currentRange = 0;
 
 		auto* movement = enemy.GetMovement();
-		if (movement) movement->SetDesiredDirection({ 0, 0 });
+		if (movement) movement->SnapToCurrentCell();
 
 		// Fire goes in the direction the Fygar is facing (horizontal only)
 		const std::string& lastAnim = enemy.GetLastHorizontalAnim();

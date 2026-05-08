@@ -71,6 +71,10 @@ namespace dae
 		const glm::ivec2& GetGridOffset() const { return m_gridOffset; }
 
 		int GetLayer(int gridY) const;
+		void SetSurfaceRows(int rows) { m_surfaceRows = rows; }
+
+		// First row entities can walk on (last surface row = ground level)
+		int GetMinPlayableRow() const { return m_surfaceRows - 1; }
 
 	private:
 		int m_width;
@@ -80,9 +84,12 @@ namespace dae
 
 		std::vector<CellData> m_cells;
 
-		std::shared_ptr<Texture2D> m_dirtTexture;
+		// One dirt texture per layer (4 layers)
+		std::shared_ptr<Texture2D> m_dirtTextures[4];
 		std::shared_ptr<Texture2D> m_tunnelTexture;
 		std::shared_ptr<Texture2D> m_surfaceTexture;
+
+		int m_surfaceRows{ 2 };
 
 		int Index(int x, int y) const { return y * m_width + x; }
 	};

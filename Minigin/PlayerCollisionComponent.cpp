@@ -1,5 +1,6 @@
 #include "PlayerCollisionComponent.h"
 #include "GridMovementComponent.h"
+#include "PumpComponent.h"
 #include <algorithm>
 #include "GridComponent.h"
 #include "EnemyComponent.h"
@@ -67,6 +68,10 @@ namespace dae
 				--m_lives;
 				m_dead = true;
 				m_respawnTimer = m_respawnDelay;
+
+				// Reset pump so it doesnt block movement after respawn
+				auto* pump = GetOwner()->GetComponent<PumpComponent>();
+				if (pump) pump->ForceReset();
 
 				auto* render = GetOwner()->GetComponent<RenderComponent>();
 				if (render) render->SetSourceRect(0, 0, 0, 0);

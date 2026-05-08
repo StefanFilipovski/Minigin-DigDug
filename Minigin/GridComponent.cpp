@@ -16,9 +16,13 @@ namespace dae
 		, m_gridOffset(gridOffset)
 		, m_cells(static_cast<size_t>(width* height))
 	{
-		m_dirtTexture = ResourceManager::GetInstance().LoadTexture("dirt.png");
-		m_tunnelTexture = ResourceManager::GetInstance().LoadTexture("tunnel.png");
-		m_surfaceTexture = ResourceManager::GetInstance().LoadTexture("surface.png");
+		auto& rm = ResourceManager::GetInstance();
+		m_dirtTextures[0] = rm.LoadTexture("yellow_01.png");
+		m_dirtTextures[1] = rm.LoadTexture("ground_08.png");
+		m_dirtTextures[2] = rm.LoadTexture("ground_16.png");
+		m_dirtTextures[3] = rm.LoadTexture("ground_24.png");
+		m_tunnelTexture = rm.LoadTexture("tunnel.png");
+		m_surfaceTexture = rm.LoadTexture("sky.png");
 	}
 
 	void GridComponent::Render() const
@@ -28,6 +32,9 @@ namespace dae
 
 		for (int y = 0; y < m_height; ++y)
 		{
+			int layer = GetLayer(y);
+			int texIdx = std::clamp(layer - 1, 0, 3);
+
 			for (int x = 0; x < m_width; ++x)
 			{
 				const auto& cell = m_cells[Index(x, y)];
@@ -38,9 +45,8 @@ namespace dae
 				{
 				case CellType::Dirt:
 				{
-					if (m_dirtTexture)
-						renderer.RenderTexture(*m_dirtTexture, px, py, cs, cs);
-					// Partial-dig edge sprites not yet implemented
+					if (m_dirtTextures[texIdx])
+						renderer.RenderTexture(*m_dirtTextures[texIdx], px, py, cs, cs);
 					break;
 				}
 				case CellType::Tunnel:
@@ -140,9 +146,17 @@ namespace dae
 
 	int GridComponent::GetLayer(int gridY) const
 	{
-		if (gridY <= 4) return 1;
-		if (gridY <= 7) return 2;
-		if (gridY <= 10) return 3;
-		return 4;
+		// Surface rows are layer 1 (yellow)
+		if (gridY < m_surfaceRows) return 1;
+
+		// Underground rows split evenly into 4 layers
+		int underground = gridY - m_surfaceRows;
+		int undergroundTotal = m_height - m_surfaceRows;
+		int rowsPerLayer = undergroundTotal / 4;
+		if (rowsPerLayer < 1) rowsPerLayer = 1;
+
+		int layer = (underground / rowsPerLayer) + 1;
+		if (layer > 4) layer = 4;
+		return layer;
 	}
 }

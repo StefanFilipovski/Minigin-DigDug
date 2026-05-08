@@ -38,8 +38,6 @@ namespace dae
 		EnemyStateType GetType() const override { return EnemyStateType::Normal; }
 
 	private:
-		float m_dirChangeTimer{ 0.f };
-		float m_ghostCooldown{ 0.f };
 		float m_fireCooldown{ 0.f };
 	};
 
@@ -52,8 +50,7 @@ namespace dae
 		EnemyStateType GetType() const override { return EnemyStateType::Ghost; }
 
 	private:
-		float m_ghostTimer{ 0.f };
-		float m_dirChangeTimer{ 0.f };
+		bool m_hasBeenInDirt{ false };
 	};
 
 	class EnemyInflatingState final : public EnemyState

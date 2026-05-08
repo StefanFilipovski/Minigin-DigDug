@@ -68,7 +68,6 @@ namespace dae
 		bool ShouldBecomeGhost() const;
 		bool IsInTunnel() const;
 
-		float GetDirChangeInterval() const { return m_dirChangeInterval; }
 		float GetGhostDuration() const { return m_ghostDuration; }
 		float GetMinGhostInterval() const { return m_minGhostInterval; }
 		float GetMaxGhostInterval() const { return m_maxGhostInterval; }
@@ -76,6 +75,11 @@ namespace dae
 		int GetMaxInflateStages() const { return MaxInflateStages; }
 		float GetMinFireInterval() const { return m_minFireInterval; }
 		float GetMaxFireInterval() const { return m_maxFireInterval; }
+
+		// Persistent ghost cooldown so fire breathing doesnt reset progress
+		float GetGhostCooldownRemaining() const { return m_ghostCooldownRemaining; }
+		void SetGhostCooldownRemaining(float t) { m_ghostCooldownRemaining = t; }
+		void RandomizeGhostCooldown();
 
 		void ChangeState(std::unique_ptr<EnemyState> newState);
 
@@ -102,11 +106,11 @@ namespace dae
 		float m_maxGhostInterval{ 12.f };
 		float m_ghostDuration{ 8.f };
 		float m_deflateTime{ 1.5f };
-		float m_dirChangeInterval{ 0.3f };
 		float m_minFireInterval{ 4.f };
 		float m_maxFireInterval{ 10.f };
 
 		std::string m_lastHorizontalAnim{ "walk_right" };
+		float m_ghostCooldownRemaining{ -1.f }; // -1 means not initialized
 
 		// Fire rendering (Fygar only)
 		std::shared_ptr<Texture2D> m_fireTexture;

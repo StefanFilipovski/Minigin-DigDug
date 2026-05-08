@@ -145,6 +145,7 @@ namespace dae
 
 		auto* pGrid = gridGo->AddComponent<GridComponent>(
 			data.gridWidth, data.gridHeight, data.cellSize, data.gridOffset);
+		pGrid->SetSurfaceRows(data.surfaceRows);
 
 		// Initialize grid cells from level data
 		for (int y = 0; y < data.gridHeight; ++y)

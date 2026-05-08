@@ -78,8 +78,7 @@ namespace dae
 			m_pCurrentState->Enter(*this);
 	}
 
-	// --- Public API (delegates to current state where needed) ---
-
+	
 	EnemyStateType EnemyComponent::GetStateType() const
 	{
 		if (m_pCurrentState)
@@ -278,6 +277,13 @@ namespace dae
 	{
 		CacheComponents();
 		return m_pAnimator;
+	}
+
+	void EnemyComponent::RandomizeGhostCooldown()
+	{
+		m_ghostCooldownRemaining = m_minGhostInterval +
+			static_cast<float>(std::rand() % 100) / 100.f *
+			(m_maxGhostInterval - m_minGhostInterval);
 	}
 
 	// --- AI helpers (used by NormalState and GhostState) ---

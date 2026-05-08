@@ -29,6 +29,9 @@ namespace dae
 		void SetGhostMode(bool ghost) { m_isGhost = ghost; }
 		bool IsGhostMode() const { return m_isGhost; }
 
+		// Immediately stop movement and snap to current grid cell
+		void SnapToCurrentCell();
+
 		void SetSpeed(float speed) { m_speed = speed; }
 		float GetSpeed() const { return m_speed; }
 

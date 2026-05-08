@@ -251,6 +251,13 @@ namespace dae
 			src, visibleLong, m_hoseRenderShort, angle, &pivot);
 	}
 
+	void PumpComponent::ForceReset()
+	{
+		m_state = PumpState::Idle;
+		m_hoseLength = 0.f;
+		m_pLatchedEnemyGO = nullptr;
+	}
+
 	void PumpComponent::CalculateRange()
 	{
 		if (!m_pMovement || !m_pGrid) return;
