@@ -1,7 +1,7 @@
 #pragma once
 #include "Component.h"
-#include "../out/build/x64-debug/_deps/glm-src/glm/ext/vector_int2.hpp"
-#include "../out/build/x64-debug/_deps/glm-src/glm/ext/vector_float2.hpp"
+#include <glm/ext/vector_int2.hpp>
+#include <glm/ext/vector_float2.hpp>
 
 namespace dae
 {

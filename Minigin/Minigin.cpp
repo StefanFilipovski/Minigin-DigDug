@@ -17,6 +17,8 @@
 #include "GameStateManager.h"
 #include "Renderer.h"
 #include "ResourceManager.h"
+#include "ServiceLocator.h"
+#include "SDLSoundService.h"
 
 using namespace std::chrono;
 
@@ -52,18 +54,18 @@ void PrintSDLVersion()
 	LogSDLVersion("Linked with SDL_ttf ", SDL_VERSIONNUM_MAJOR(version), SDL_VERSIONNUM_MINOR(version), SDL_VERSIONNUM_MICRO(version));
 }
 
-dae::Minigin::Minigin(const std::filesystem::path& dataPath)
+dae::Minigin::Minigin(const std::filesystem::path& dataPath, const std::string& windowTitle)
 {
 	PrintSDLVersion();
 
-	if (!SDL_InitSubSystem(SDL_INIT_VIDEO))
+	if (!SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
 	{
 		SDL_Log("Renderer error: %s", SDL_GetError());
 		throw std::runtime_error(std::string("SDL_Init Error: ") + SDL_GetError());
 	}
 
 	g_window = SDL_CreateWindow(
-		"Dig Dug - Programming 4",
+		windowTitle.c_str(),
 		640,
 		480,
 		SDL_WINDOW_OPENGL
@@ -75,10 +77,16 @@ dae::Minigin::Minigin(const std::filesystem::path& dataPath)
 
 	Renderer::GetInstance().Init(g_window);
 	ResourceManager::GetInstance().Init(dataPath);
+
+	// Register the SDL sound service via the service locator
+	ServiceLocator::RegisterSoundService(std::make_unique<SDLSoundService>());
 }
 
 dae::Minigin::~Minigin()
 {
+	// Destroy sound service before SDL shutdown
+	ServiceLocator::RegisterSoundService(nullptr);
+
 	Renderer::GetInstance().Destroy();
 	SDL_DestroyWindow(g_window);
 	g_window = nullptr;

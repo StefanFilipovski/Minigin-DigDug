@@ -5,6 +5,9 @@
 #include "SceneManager.h"
 #include "InputManager.h"
 #include "ResourceManager.h"
+#include "ServiceLocator.h"
+#include "NullSoundService.h"
+#include "SDLSoundService.h"
 #include "GridMoveCommand.h"
 #include "PumpCommand.h"
 #include "Scene.h"
@@ -33,10 +36,30 @@ namespace dae
 		void Execute() override
 		{
 			m_muted = !m_muted;
-			std::cout << (m_muted ? "[Sound Muted]" : "[Sound Unmuted]") << "\n";
+			if (m_muted)
+			{
+				ServiceLocator::RegisterSoundService(std::make_unique<NullSoundService>());
+				std::cout << "[Sound Muted]\n";
+			}
+			else
+			{
+				ServiceLocator::RegisterSoundService(std::make_unique<SDLSoundService>());
+				std::cout << "[Sound Unmuted]\n";
+			}
 		}
 	private:
 		static inline bool m_muted{ false };
+	};
+
+	// F3 = play a test sound to verify the sound system works
+	class TestSoundCommand final : public Command
+	{
+	public:
+		void Execute() override
+		{
+			ServiceLocator::GetSoundService().PlaySound("Data/pop.wav");
+			std::cout << "[Test Sound Played]\n";
+		}
 	};
 
 	// ---- PlayingState implementation ----
@@ -111,6 +134,10 @@ namespace dae
 		// F2 = mute/unmute
 		input.BindKeyboardCommand(SDL_SCANCODE_F2, KeyState::Down,
 			std::make_unique<MuteCommand>());
+
+		// F3 = test sound
+		input.BindKeyboardCommand(SDL_SCANCODE_F3, KeyState::Down,
+			std::make_unique<TestSoundCommand>());
 
 		// Player 1: WASD (keyboard)
 		if (m_buildResult.pPlayer1)

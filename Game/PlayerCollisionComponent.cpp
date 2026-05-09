@@ -1,11 +1,12 @@
 #include "PlayerCollisionComponent.h"
 #include "GridMovementComponent.h"
 #include "PumpComponent.h"
+#include "ServiceLocator.h"
 #include <algorithm>
 #include "GridComponent.h"
 #include "EnemyComponent.h"
 #include "RenderComponent.h"
-#include "EventIds.h"
+#include "GameEventIds.h"
 #include "GameObject.h"
 
 namespace dae
@@ -68,6 +69,8 @@ namespace dae
 				--m_lives;
 				m_dead = true;
 				m_respawnTimer = m_respawnDelay;
+
+				ServiceLocator::GetSoundService().PlaySound("Data/death.wav");
 
 				// Reset pump so it doesnt block movement after respawn
 				auto* pump = GetOwner()->GetComponent<PumpComponent>();

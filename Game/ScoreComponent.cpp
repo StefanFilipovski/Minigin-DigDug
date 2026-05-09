@@ -1,6 +1,6 @@
 #include "ScoreComponent.h"
 #include "GameObject.h"
-#include "EventIds.h"
+#include "GameEventIds.h"
 
 namespace dae
 {

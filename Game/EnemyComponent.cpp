@@ -8,12 +8,9 @@
 #include "ResourceManager.h"
 #include "Renderer.h"
 #include "Texture2D.h"
-#include "EventIds.h"
+#include "GameEventIds.h"
 #include "GameObject.h"
 #include <string>
-#include <cstdlib>
-#include <cmath>
-#include <algorithm>
 
 namespace dae
 {
@@ -24,8 +21,7 @@ namespace dae
 		, m_type(type)
 		, m_pTarget(pTarget)
 	{
-		auto initialState = std::make_unique<EnemyNormalState>();
-		m_pCurrentState = std::move(initialState);
+		m_pCurrentState = std::make_unique<EnemyNormalState>();
 
 		if (m_type == EnemyType::Fygar)
 		{
@@ -55,7 +51,11 @@ namespace dae
 		}
 
 		if (m_pCurrentState)
-			m_pCurrentState->Update(*this, deltaTime);
+		{
+			auto newState = m_pCurrentState->Update(*this, deltaTime);
+			if (newState)
+				ChangeState(std::move(newState));
+		}
 	}
 
 	void EnemyComponent::FixedUpdate(float /*fixedTimeStep*/)
@@ -78,7 +78,6 @@ namespace dae
 			m_pCurrentState->Enter(*this);
 	}
 
-	
 	EnemyStateType EnemyComponent::GetStateType() const
 	{
 		if (m_pCurrentState)
@@ -150,8 +149,6 @@ namespace dae
 		auto* sdlRenderer = Renderer::GetInstance().GetSDLRenderer();
 		auto* sdlTexture = m_fireTexture->GetSDLTexture();
 
-		// Fire extends horizontally from the cell next to the Fygar
-		// Frame 1 (16x16) for the first cell, frame 2 (32x16) for the rest
 		bool facingLeft = (fireDir.x < 0);
 
 		for (int i = 1; i <= range; ++i)
@@ -161,13 +158,11 @@ namespace dae
 
 			if (i == 1)
 			{
-				// Small flame near the Fygar
 				src = { 0.f, 0.f, 16.f, 16.f };
 				dstW = cs;
 			}
 			else
 			{
-				// Larger flame further out
 				src = { 16.f, 0.f, 32.f, 16.f };
 				dstW = cs;
 			}
@@ -180,6 +175,8 @@ namespace dae
 			SDL_RenderTextureRotated(sdlRenderer, sdlTexture, &src, &dst, 0.0, nullptr, flip);
 		}
 	}
+
+	// External triggers — these still call ChangeState directly
 
 	void EnemyComponent::StartInflating(const glm::ivec2& attackDir)
 	{
@@ -198,7 +195,11 @@ namespace dae
 
 		auto* inflating = dynamic_cast<EnemyInflatingState*>(m_pCurrentState.get());
 		if (inflating)
-			inflating->PumpOnce(*this);
+		{
+			auto newState = inflating->PumpOnce(*this);
+			if (newState)
+				ChangeState(std::move(newState));
+		}
 	}
 
 	void EnemyComponent::Crush()
@@ -265,8 +266,6 @@ namespace dae
 		}
 	}
 
-	// --- Accessors for state classes ---
-
 	GridMovementComponent* EnemyComponent::GetMovement() const
 	{
 		CacheComponents();
@@ -277,119 +276,5 @@ namespace dae
 	{
 		CacheComponents();
 		return m_pAnimator;
-	}
-
-	void EnemyComponent::RandomizeGhostCooldown()
-	{
-		m_ghostCooldownRemaining = m_minGhostInterval +
-			static_cast<float>(std::rand() % 100) / 100.f *
-			(m_maxGhostInterval - m_minGhostInterval);
-	}
-
-	// --- AI helpers (used by NormalState and GhostState) ---
-
-	glm::ivec2 EnemyComponent::ChooseDirection() const
-	{
-		if (!m_pTarget || !m_pMovement || !m_pGrid) return { 1, 0 };
-
-		auto* targetMovement = m_pTarget->GetComponent<GridMovementComponent>();
-		if (!targetMovement) return { 1, 0 };
-
-		const auto& myPos = m_pMovement->GetGridPosition();
-		const auto& targetPos = targetMovement->GetGridPosition();
-
-		struct DirOption
-		{
-			glm::ivec2 dir;
-			int distSq;
-			bool passable;
-		};
-
-		DirOption options[4] = {
-			{{ 1, 0}, 0, false},
-			{{-1, 0}, 0, false},
-			{{ 0,-1}, 0, false},
-			{{ 0, 1}, 0, false}
-		};
-
-		glm::ivec2 currentDir = m_pMovement->GetCurrentDirection();
-
-		for (auto& opt : options)
-		{
-			glm::ivec2 target = myPos + opt.dir;
-			opt.passable = m_pGrid->IsInBounds(target.x, target.y) &&
-				m_pGrid->GetCellType(target.x, target.y) != CellType::Dirt;
-
-			glm::ivec2 newDiff = targetPos - target;
-			opt.distSq = newDiff.x * newDiff.x + newDiff.y * newDiff.y;
-		}
-
-		std::sort(std::begin(options), std::end(options),
-			[](const DirOption& a, const DirOption& b)
-			{
-				return a.distSq < b.distSq;
-			});
-
-		glm::ivec2 reverse = -currentDir;
-
-		for (const auto& opt : options)
-		{
-			if (opt.passable && opt.dir != reverse)
-				return opt.dir;
-		}
-
-		for (const auto& opt : options)
-		{
-			if (opt.passable)
-				return opt.dir;
-		}
-
-		return { 0, 0 };
-	}
-
-	glm::ivec2 EnemyComponent::ChooseGhostDirection() const
-	{
-		if (!m_pTarget || !m_pMovement) return { 1, 0 };
-
-		auto* targetMovement = m_pTarget->GetComponent<GridMovementComponent>();
-		if (!targetMovement) return { 1, 0 };
-
-		const auto& myPos = m_pMovement->GetGridPosition();
-		const auto& targetPos = targetMovement->GetGridPosition();
-		glm::ivec2 diff = targetPos - myPos;
-
-		if (std::abs(diff.x) >= std::abs(diff.y))
-		{
-			if (diff.x > 0) return { 1, 0 };
-			if (diff.x < 0) return { -1, 0 };
-		}
-
-		if (diff.y > 0) return { 0, 1 };
-		if (diff.y < 0) return { 0, -1 };
-
-		return { 1, 0 };
-	}
-
-	bool EnemyComponent::ShouldBecomeGhost() const
-	{
-		if (!m_pMovement || !m_pTarget) return false;
-
-		auto* targetMovement = m_pTarget->GetComponent<GridMovementComponent>();
-		if (!targetMovement) return false;
-
-		const auto& myPos = m_pMovement->GetGridPosition();
-		const auto& targetPos = targetMovement->GetGridPosition();
-
-		int dist = std::abs(targetPos.x - myPos.x) + std::abs(targetPos.y - myPos.y);
-
-		return dist > 5 || (std::rand() % 100 < 20);
-	}
-
-	bool EnemyComponent::IsInTunnel() const
-	{
-		if (!m_pMovement || !m_pGrid) return false;
-		const auto& pos = m_pMovement->GetGridPosition();
-		CellType type = m_pGrid->GetCellType(pos.x, pos.y);
-		return type == CellType::Tunnel || type == CellType::Surface;
 	}
 }

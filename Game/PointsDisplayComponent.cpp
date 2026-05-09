@@ -2,7 +2,7 @@
 #include "TextComponent.h"
 #include "ScoreComponent.h"
 #include "GameObject.h"
-#include "EventIds.h"
+#include "GameEventIds.h"
 #include <string>
 
 namespace dae

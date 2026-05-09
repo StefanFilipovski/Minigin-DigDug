@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 #include <SDL3/SDL.h>
-#include "../out/build/x64-debug/_deps/glm-src/glm/ext/vector_int2.hpp"
+#include <glm/ext/vector_int2.hpp>
 
 namespace dae
 {

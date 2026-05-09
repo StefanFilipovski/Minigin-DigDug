@@ -43,7 +43,7 @@ int main(int, char* [])
 	if (!fs::exists(data_location))
 		data_location = "../Data/";
 #endif
-	dae::Minigin engine(data_location);
+	dae::Minigin engine(data_location, "Dig Dug - Programming 4");
 	engine.Run(load);
 	return 0;
 }
