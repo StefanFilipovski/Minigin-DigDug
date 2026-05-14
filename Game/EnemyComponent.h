@@ -65,6 +65,10 @@ namespace dae
 		float GetMinFireInterval() const { return m_minFireInterval; }
 		float GetMaxFireInterval() const { return m_maxFireInterval; }
 
+		// Scoring helpers
+		const glm::ivec2& GetLastAttackDirection() const { return m_lastAttackDirection; }
+		bool WasCrushedByRock() const { return m_crushedByRock; }
+
 		void ChangeState(std::unique_ptr<EnemyState> newState);
 
 		// Public wrapper so state classes can notify observers
@@ -90,6 +94,9 @@ namespace dae
 		float m_maxFireInterval{ 10.f };
 
 		std::string m_lastHorizontalAnim{ "walk_right" };
+
+		glm::ivec2 m_lastAttackDirection{ 0, 0 };
+		bool m_crushedByRock{ false };
 
 		// Fire rendering (Fygar only)
 		std::shared_ptr<Texture2D> m_fireTexture;

@@ -6,6 +6,9 @@
 #include "PumpComponent.h"
 #include "EnemyComponent.h"
 #include "PlayerCollisionComponent.h"
+#include "RockComponent.h"
+#include "ScoreComponent.h"
+#include "PointsDisplayComponent.h"
 #include "Scene.h"
 #include "GameObject.h"
 #include "TransformComponent.h"
@@ -113,8 +116,20 @@ namespace dae
 		result.enemies = CreateEnemies(scene, result.pGrid, data, mode,
 			result.pVersusEnemy, result.pPlayer1);
 
-		CreateRocks(scene, result.pGrid, data);
-		CreateHUD(scene, mode);
+		// Get score components before creating rocks (rocks need them for crush bonuses)
+		ScoreComponent* pScore1 = result.pPlayer1 ?
+			result.pPlayer1->GetComponent<ScoreComponent>() : nullptr;
+		ScoreComponent* pScore2 = result.pPlayer2 ?
+			result.pPlayer2->GetComponent<ScoreComponent>() : nullptr;
+
+		// Set scene early so popups can spawn during gameplay
+		if (pScore1) pScore1->SetScene(&scene);
+		if (pScore2) pScore2->SetScene(&scene);
+
+		CreateRocks(scene, result.pGrid, data,
+			result.pPlayer1, result.pPlayer2, result.enemies,
+			pScore1, pScore2);
+		CreateHUD(scene, mode, pScore1, pScore2);
 
 		// Wire up collision and pump — both need the full enemy list
 		if (result.pPlayer1)
@@ -132,6 +147,18 @@ namespace dae
 			{
 				for (auto* enemy : result.enemies)
 					pump->AddEnemy(enemy);
+			}
+
+			// Wire up scoring: register player's ScoreComponent as observer on each enemy
+			result.pScore1 = result.pPlayer1->GetComponent<ScoreComponent>();
+			if (result.pScore1)
+			{
+				for (auto* enemy : result.enemies)
+				{
+					auto* enemyComp = enemy->GetComponent<EnemyComponent>();
+					if (enemyComp)
+						enemyComp->AddObserver(result.pScore1);
+				}
 			}
 		}
 
@@ -252,6 +279,7 @@ namespace dae
 		movement->SetGridPosition(spawnGrid.x, spawnGrid.y);
 
 		player->AddComponent<PumpComponent>(pGrid);
+		player->AddComponent<ScoreComponent>();
 
 		// Enemies are registered into this component after they're created
 		player->AddComponent<PlayerCollisionComponent>(pGrid);
@@ -413,27 +441,49 @@ namespace dae
 		return enemies;
 	}
 
-	void LevelLoader::CreateRocks(Scene& scene, GridComponent* pGrid, const LevelData& data)
+	void LevelLoader::CreateRocks(Scene& scene, GridComponent* pGrid, const LevelData& data,
+		GameObject* pPlayer1, GameObject* pPlayer2,
+		const std::vector<GameObject*>& enemies,
+		ScoreComponent* pScore1, ScoreComponent* pScore2)
 	{
 		for (const auto& rockPos : data.rocks)
 		{
 			auto rock = std::make_unique<GameObject>();
 			glm::vec2 pos = pGrid->GridToPixel(rockPos.gridX, rockPos.gridY);
 			rock->AddComponent<TransformComponent>()->SetLocalPosition(pos.x, pos.y);
-			rock->AddComponent<RenderComponent>();
-			rock->GetComponent<RenderComponent>()->SetTexture("rock.png");
+
+			auto* rockComp = rock->AddComponent<RockComponent>(
+				pGrid, rockPos.gridX, rockPos.gridY);
+
+			// Wire up player and enemy references
+			if (pPlayer1)
+				rockComp->AddPlayer(pPlayer1);
+			if (pPlayer2)
+				rockComp->AddPlayer(pPlayer2);
+
+			for (auto* enemy : enemies)
+				rockComp->AddEnemy(enemy);
+
+			// Register score components as observers for rock crush events
+			if (pScore1) rockComp->AddObserver(pScore1);
+			if (pScore2) rockComp->AddObserver(pScore2);
 
 			scene.Add(std::move(rock));
 		}
 	}
 
-	void LevelLoader::CreateHUD(Scene& scene, GameMode mode)
+	void LevelLoader::CreateHUD(Scene& scene, GameMode mode,
+		ScoreComponent* pScore1, ScoreComponent* pScore2)
 	{
 		auto font = ResourceManager::GetInstance().LoadFont("Lingua.otf", 18);
 
+		// Player 1 score display — observes ScoreComponent for live updates
 		auto scoreGo = std::make_unique<GameObject>();
 		scoreGo->AddComponent<TransformComponent>()->SetLocalPosition(10.f, 5.f);
 		scoreGo->AddComponent<TextComponent>(font, "Score: 0");
+		auto* scoreDisplay = scoreGo->AddComponent<PointsDisplayComponent>();
+		if (pScore1)
+			pScore1->AddObserver(scoreDisplay);
 		scene.Add(std::move(scoreGo));
 
 		auto livesGo = std::make_unique<GameObject>();
@@ -451,6 +501,9 @@ namespace dae
 			auto score2Go = std::make_unique<GameObject>();
 			score2Go->AddComponent<TransformComponent>()->SetLocalPosition(10.f, 550.f);
 			score2Go->AddComponent<TextComponent>(font, "P2 Score: 0");
+			auto* score2Display = score2Go->AddComponent<PointsDisplayComponent>();
+			if (pScore2)
+				pScore2->AddObserver(score2Display);
 			scene.Add(std::move(score2Go));
 		}
 

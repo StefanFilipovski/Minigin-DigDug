@@ -66,20 +66,7 @@ namespace dae
 
 			if (hit)
 			{
-				--m_lives;
-				m_dead = true;
-				m_respawnTimer = m_respawnDelay;
-
-				ServiceLocator::GetSoundService().PlaySound("Data/death.wav");
-
-				// Reset pump so it doesnt block movement after respawn
-				auto* pump = GetOwner()->GetComponent<PumpComponent>();
-				if (pump) pump->ForceReset();
-
-				auto* render = GetOwner()->GetComponent<RenderComponent>();
-				if (render) render->SetSourceRect(0, 0, 0, 0);
-
-				NotifyObservers(EVENT_PLAYER_DIED, GetOwner());
+				TriggerDeath();
 				return;
 			}
 		}
@@ -93,6 +80,25 @@ namespace dae
 	void PlayerCollisionComponent::ClearEnemies()
 	{
 		m_enemies.clear();
+	}
+
+	void PlayerCollisionComponent::TriggerDeath()
+	{
+		if (m_dead) return;
+
+		--m_lives;
+		m_dead = true;
+		m_respawnTimer = m_respawnDelay;
+
+		ServiceLocator::GetSoundService().PlaySound("Data/death.wav");
+
+		auto* pump = GetOwner()->GetComponent<PumpComponent>();
+		if (pump) pump->ForceReset();
+
+		auto* render = GetOwner()->GetComponent<RenderComponent>();
+		if (render) render->SetSourceRect(0, 0, 0, 0);
+
+		NotifyObservers(EVENT_PLAYER_DIED, GetOwner());
 	}
 
 	void PlayerCollisionComponent::Respawn(int gridX, int gridY)

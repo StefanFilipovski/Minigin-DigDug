@@ -21,6 +21,7 @@ namespace dae
 		void SetDesiredDirection(const glm::ivec2& direction);
 
 		const glm::ivec2& GetGridPosition() const { return m_gridPos; }
+		const glm::ivec2& GetTargetGridPosition() const { return m_targetGridPos; }
 		const glm::ivec2& GetCurrentDirection() const { return m_currentDirection; }
 		bool IsMoving() const { return m_isMoving; }
 

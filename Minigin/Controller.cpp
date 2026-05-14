@@ -1,8 +1,9 @@
 #include "Controller.h"
 
-#if __EMSCRIPTEN__
-// Emscripten/SDL fallback
+// SDL3 gamepad — works with all controller types (Xbox, PlayStation, Switch, generic)
 #include <SDL3/SDL.h>
+
+#if 1  // Always use SDL3 gamepad (cross-platform, all controller types)
 
 namespace dae
 {

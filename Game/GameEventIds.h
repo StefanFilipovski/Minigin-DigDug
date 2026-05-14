@@ -9,4 +9,5 @@ namespace dae
 	inline constexpr EventId EVENT_GAME_OVER = make_sdbm_hash("GameOver");
 	inline constexpr EventId EVENT_LEVEL_COMPLETE = make_sdbm_hash("LevelComplete");
 	inline constexpr EventId EVENT_ROCK_DROPPED = make_sdbm_hash("RockDropped");
+	inline constexpr EventId EVENT_ROCK_CRUSH_COMPLETE = make_sdbm_hash("RockCrushComplete");
 }

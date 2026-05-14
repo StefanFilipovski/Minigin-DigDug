@@ -64,6 +64,12 @@ namespace dae
 		float m_retractTimer{ 0.f };
 		static constexpr float RetractDelay{ 0.15f };
 
+		// Hold-to-pump: slower auto-pump rate while button is held
+		bool  m_fireButtonHeld{ false };       // true during frames where Fire() is called
+		bool  m_fireButtonHeldPrev{ false };    // held state from previous frame
+		float m_holdPumpTimer{ 0.f };           // accumulator for auto-pump while holding
+		static constexpr float HoldPumpInterval{ 0.4f };  // seconds between auto-pumps when holding
+
 		// PumpString.png is a 32×6 horizontal sprite (extending right).
 		// We rotate it for up/down/left and clip the source to animate extension.
 		std::shared_ptr<Texture2D> m_hoseTexture;

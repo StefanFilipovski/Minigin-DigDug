@@ -38,6 +38,8 @@ namespace dae
 		glm::ivec2 gridOffset{ 64, 48 };
 	};
 
+	class ScoreComponent;
+
 	// Returned by BuildScene so PlayingState can bind input to the right objects
 	struct LevelBuildResult
 	{
@@ -46,6 +48,8 @@ namespace dae
 		GameObject* pPlayer2{ nullptr };
 		GameObject* pVersusEnemy{ nullptr };
 		std::vector<GameObject*> enemies;
+		ScoreComponent* pScore1{ nullptr };
+		ScoreComponent* pScore2{ nullptr };
 	};
 
 	class LevelLoader final
@@ -61,7 +65,11 @@ namespace dae
 		static std::vector<GameObject*> CreateEnemies(Scene& scene, GridComponent* pGrid,
 			const LevelData& data, GameMode mode, GameObject*& outVersusEnemy,
 			GameObject* pPlayerTarget);
-		static void CreateRocks(Scene& scene, GridComponent* pGrid, const LevelData& data);
-		static void CreateHUD(Scene& scene, GameMode mode);
+		static void CreateRocks(Scene& scene, GridComponent* pGrid, const LevelData& data,
+			GameObject* pPlayer1, GameObject* pPlayer2,
+			const std::vector<GameObject*>& enemies,
+			ScoreComponent* pScore1 = nullptr, ScoreComponent* pScore2 = nullptr);
+		static void CreateHUD(Scene& scene, GameMode mode,
+			ScoreComponent* pScore1 = nullptr, ScoreComponent* pScore2 = nullptr);
 	};
 }

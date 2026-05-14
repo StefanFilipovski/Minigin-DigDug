@@ -25,6 +25,7 @@ namespace dae
 
 		bool IsDead() const { return m_dead; }
 		void Respawn(int gridX, int gridY);
+		void TriggerDeath();
 
 	private:
 		GridComponent* m_pGrid;

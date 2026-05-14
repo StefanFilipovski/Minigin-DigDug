@@ -220,8 +220,10 @@ add_executable(DigDug
   Game/EnemyComponent.cpp
   Game/EnemyStates.cpp
   Game/PumpComponent.cpp
+  Game/RockComponent.cpp
   Game/HealthComponent.cpp
   Game/ScoreComponent.cpp
+  Game/FloatingScoreComponent.cpp
   Game/LivesDisplayComponent.cpp
   Game/PointsDisplayComponent.cpp
 )

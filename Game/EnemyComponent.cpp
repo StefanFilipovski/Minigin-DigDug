@@ -186,6 +186,7 @@ namespace dae
 		if (type == EnemyStateType::Ghost || type == EnemyStateType::FireBreathing)
 			return;
 
+		m_lastAttackDirection = attackDir;
 		ChangeState(std::make_unique<EnemyInflatingState>(attackDir));
 	}
 
@@ -204,6 +205,7 @@ namespace dae
 
 	void EnemyComponent::Crush()
 	{
+		m_crushedByRock = true;
 		ChangeState(std::make_unique<EnemyCrushedState>());
 	}
 
@@ -242,28 +244,23 @@ namespace dae
 
 		int layer = m_pGrid->GetLayer(m_pMovement->GetGridPosition().y);
 
-		if (m_type == EnemyType::Pooka)
+		// Base score by layer (same for Pooka and Fygar base).
+		// Fygar horizontal bonus (2x) is applied by the score system.
+		int base = 200;
+		switch (layer)
 		{
-			switch (layer)
-			{
-			case 1: return 200;
-			case 2: return 300;
-			case 3: return 400;
-			case 4: return 500;
-			default: return 200;
-			}
+		case 1: base = 200; break;
+		case 2: base = 300; break;
+		case 3: base = 400; break;
+		case 4: base = 500; break;
+		default: base = 200; break;
 		}
-		else
-		{
-			switch (layer)
-			{
-			case 1: return 400;
-			case 2: return 600;
-			case 3: return 800;
-			case 4: return 1000;
-			default: return 400;
-			}
-		}
+
+		// Apply Fygar horizontal bonus: killed from left or right = 2x
+		if (m_type == EnemyType::Fygar && m_lastAttackDirection.x != 0)
+			base *= 2;
+
+		return base;
 	}
 
 	GridMovementComponent* EnemyComponent::GetMovement() const

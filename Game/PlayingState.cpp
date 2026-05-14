@@ -154,7 +154,9 @@ namespace dae
 				std::make_unique<GridMoveCommand>(p1, glm::ivec2{ 1, 0 }));
 
 			// Pump attack: Space (keyboard) and A (controller)
-			input.BindKeyboardCommand(SDL_SCANCODE_SPACE, KeyState::Down,
+			// Pressed = fires every frame while held, so PumpComponent can
+			// distinguish tap vs hold and auto-pump at a slower rate.
+			input.BindKeyboardCommand(SDL_SCANCODE_SPACE, KeyState::Pressed,
 				std::make_unique<PumpCommand>(p1));
 
 			// Player 1: Controller 0 (DPad)
@@ -168,7 +170,7 @@ namespace dae
 				std::make_unique<GridMoveCommand>(p1, glm::ivec2{ 1, 0 }));
 
 			// Pump on controller
-			input.BindControllerCommand(0, Controller::Button::A, KeyState::Down,
+			input.BindControllerCommand(0, Controller::Button::A, KeyState::Pressed,
 				std::make_unique<PumpCommand>(p1));
 		}
 

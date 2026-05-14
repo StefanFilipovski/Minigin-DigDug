@@ -53,13 +53,21 @@ namespace dae
 		CacheComponents();
 		if (!m_pMovement) return;
 
-		// While latched onto an enemy, each Fire() press inflates it one stage
+		// Mark button as held this frame (cleared at end of Update)
+		m_fireButtonHeld = true;
+
+		// While latched onto an enemy: tap = immediate pump, hold = handled in Update
 		if (m_state == PumpState::Latched)
 		{
-			if (m_pLatchedEnemyGO && !m_pLatchedEnemyGO->IsMarkedForDestroy())
+			// Fresh press (wasn't held last frame) => immediate tap pump
+			if (!m_fireButtonHeldPrev)
 			{
-				auto* enemy = m_pLatchedEnemyGO->GetComponent<EnemyComponent>();
-				if (enemy) enemy->PumpOnce();
+				if (m_pLatchedEnemyGO && !m_pLatchedEnemyGO->IsMarkedForDestroy())
+				{
+					auto* enemy = m_pLatchedEnemyGO->GetComponent<EnemyComponent>();
+					if (enemy) enemy->PumpOnce();
+				}
+				m_holdPumpTimer = 0.f; // reset hold timer on fresh press
 			}
 			return;
 		}
@@ -165,6 +173,20 @@ namespace dae
 				m_state = PumpState::Retracting;
 				m_retractTimer = 0.f;
 			}
+			else if (m_fireButtonHeld)
+			{
+				// Hold-to-pump: auto-inflate at a slower rate than tapping
+				m_holdPumpTimer += deltaTime;
+				if (m_holdPumpTimer >= HoldPumpInterval)
+				{
+					m_holdPumpTimer -= HoldPumpInterval;
+					if (m_pLatchedEnemyGO && !m_pLatchedEnemyGO->IsMarkedForDestroy())
+					{
+						auto* enemy = m_pLatchedEnemyGO->GetComponent<EnemyComponent>();
+						if (enemy) enemy->PumpOnce();
+					}
+				}
+			}
 			break;
 		}
 
@@ -193,6 +215,10 @@ namespace dae
 			break;
 		}
 		}
+
+		// Track button state for tap vs hold detection
+		m_fireButtonHeldPrev = m_fireButtonHeld;
+		m_fireButtonHeld = false;
 	}
 
 	void PumpComponent::Render() const
@@ -256,6 +282,9 @@ namespace dae
 		m_state = PumpState::Idle;
 		m_hoseLength = 0.f;
 		m_pLatchedEnemyGO = nullptr;
+		m_fireButtonHeld = false;
+		m_fireButtonHeldPrev = false;
+		m_holdPumpTimer = 0.f;
 	}
 
 	void PumpComponent::CalculateRange()
