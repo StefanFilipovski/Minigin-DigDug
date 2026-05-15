@@ -1,6 +1,6 @@
 #include "LivesDisplayComponent.h"
 #include "TextComponent.h"
-#include "HealthComponent.h"
+#include "PlayerCollisionComponent.h"
 #include "GameObject.h"
 #include "GameEventIds.h"
 #include <string>
@@ -17,12 +17,12 @@ namespace dae
 		if (event != EVENT_PLAYER_DIED) return;
 		if (!pGameObject) return;
 
-		auto* pHealth = pGameObject->GetComponent<HealthComponent>();
-		if (!pHealth) return;
+		auto* pCollision = pGameObject->GetComponent<PlayerCollisionComponent>();
+		if (!pCollision) return;
 
 		auto* pText = GetOwner()->GetComponent<TextComponent>();
 		if (!pText) return;
 
-		pText->SetText("Lives: " + std::to_string(pHealth->GetLives()));
+		pText->SetText("Lives: " + std::to_string(pCollision->GetLives()));
 	}
 }

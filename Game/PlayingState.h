@@ -30,6 +30,7 @@ namespace dae
 	private:
 		void LoadLevel(int round);
 		void BindInput();
+		void SoftReset();
 		std::string GetLevelFilePath(int round) const;
 
 		GameMode m_gameMode{ GameMode::SinglePlayer };

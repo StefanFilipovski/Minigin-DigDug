@@ -81,6 +81,7 @@ namespace dae
 
 	void GridMovementComponent::SetDesiredDirection(const glm::ivec2& direction)
 	{
+		if (m_frozen) return; // ignore input while frozen (e.g. during death)
 		m_desiredDirection = direction;
 		m_inputActive = true;
 	}

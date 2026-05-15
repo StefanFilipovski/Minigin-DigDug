@@ -1,6 +1,7 @@
 #include "PlayerAnimController.h"
 #include "GridMovementComponent.h"
 #include "SpriteAnimatorComponent.h"
+#include "PlayerCollisionComponent.h"
 #include "PumpComponent.h"
 #include "GameObject.h"
 
@@ -12,10 +13,14 @@ namespace dae
 		{
 			m_pMovement = GetOwner()->GetComponent<GridMovementComponent>();
 			m_pAnimator = GetOwner()->GetComponent<SpriteAnimatorComponent>();
+			m_pCollision = GetOwner()->GetComponent<PlayerCollisionComponent>();
 			m_cached = true;
 		}
 
 		if (!m_pMovement || !m_pAnimator) return;
+
+		// Don't override death animation — let it play to completion
+		if (m_pCollision && m_pCollision->IsDead()) return;
 
 		// Don't override pump animation — PumpComponent manages it
 		auto* pump = GetOwner()->GetComponent<PumpComponent>();

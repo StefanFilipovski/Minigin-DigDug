@@ -9,6 +9,7 @@
 #include "RockComponent.h"
 #include "ScoreComponent.h"
 #include "PointsDisplayComponent.h"
+#include "LivesDisplayComponent.h"
 #include "Scene.h"
 #include "GameObject.h"
 #include "TransformComponent.h"
@@ -126,10 +127,10 @@ namespace dae
 		if (pScore1) pScore1->SetScene(&scene);
 		if (pScore2) pScore2->SetScene(&scene);
 
-		CreateRocks(scene, result.pGrid, data,
+		result.rocks = CreateRocks(scene, result.pGrid, data,
 			result.pPlayer1, result.pPlayer2, result.enemies,
 			pScore1, pScore2);
-		CreateHUD(scene, mode, pScore1, pScore2);
+		CreateHUD(scene, mode, pScore1, pScore2, result.pPlayer1, result.pPlayer2);
 
 		// Wire up collision and pump — both need the full enemy list
 		if (result.pPlayer1)
@@ -224,6 +225,7 @@ namespace dae
 		ResourceManager::GetInstance().LoadTexture("DigDugMove1.png", redKey);
 		ResourceManager::GetInstance().LoadTexture("DigDugMoveShovel.png", redKey);
 		ResourceManager::GetInstance().LoadTexture("DigDugMoveShovelHole.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("DigDugDie.png", redKey);
 
 		auto* render = player->AddComponent<RenderComponent>();
 		render->SetTexture("DigDugMove1.png");
@@ -268,6 +270,11 @@ namespace dae
 			{ {4 * S, 0, S, S}, {5 * S, 0, S, S} }, 6.f);
 		animator->AddAnimation("pump_down", pumpTex,
 			{ {6 * S, 0, S, S}, {7 * S, 0, S, S} }, 6.f);
+
+		// Death animation — DigDugDie.png: 62×16, 4 frames, non-looping
+		const std::string dieTex = "DigDugDie.png";
+		animator->AddAnimation("die", dieTex,
+			{ {0, 0, S, S}, {S, 0, S, S}, {2 * S, 0, S, S}, {48, 0, 14, S} }, 4.f, false);
 
 		animator->Play("walk_right");
 		animator->Pause();
@@ -441,11 +448,14 @@ namespace dae
 		return enemies;
 	}
 
-	void LevelLoader::CreateRocks(Scene& scene, GridComponent* pGrid, const LevelData& data,
+	std::vector<GameObject*> LevelLoader::CreateRocks(Scene& scene, GridComponent* pGrid,
+		const LevelData& data,
 		GameObject* pPlayer1, GameObject* pPlayer2,
 		const std::vector<GameObject*>& enemies,
 		ScoreComponent* pScore1, ScoreComponent* pScore2)
 	{
+		std::vector<GameObject*> rockPtrs;
+
 		for (const auto& rockPos : data.rocks)
 		{
 			auto rock = std::make_unique<GameObject>();
@@ -468,12 +478,17 @@ namespace dae
 			if (pScore1) rockComp->AddObserver(pScore1);
 			if (pScore2) rockComp->AddObserver(pScore2);
 
+			GameObject* ptr = rock.get();
+			rockPtrs.push_back(ptr);
 			scene.Add(std::move(rock));
 		}
+
+		return rockPtrs;
 	}
 
 	void LevelLoader::CreateHUD(Scene& scene, GameMode mode,
-		ScoreComponent* pScore1, ScoreComponent* pScore2)
+		ScoreComponent* pScore1, ScoreComponent* pScore2,
+		GameObject* pPlayer1, GameObject* pPlayer2)
 	{
 		auto font = ResourceManager::GetInstance().LoadFont("Lingua.otf", 18);
 
@@ -486,9 +501,17 @@ namespace dae
 			pScore1->AddObserver(scoreDisplay);
 		scene.Add(std::move(scoreGo));
 
+		// Player 1 lives display — observes PlayerCollisionComponent
 		auto livesGo = std::make_unique<GameObject>();
 		livesGo->AddComponent<TransformComponent>()->SetLocalPosition(10.f, 25.f);
 		livesGo->AddComponent<TextComponent>(font, "Lives: 4");
+		auto* livesDisplay = livesGo->AddComponent<LivesDisplayComponent>();
+		if (pPlayer1)
+		{
+			auto* collision = pPlayer1->GetComponent<PlayerCollisionComponent>();
+			if (collision)
+				collision->AddObserver(livesDisplay);
+		}
 		scene.Add(std::move(livesGo));
 
 		auto roundGo = std::make_unique<GameObject>();
@@ -514,5 +537,59 @@ namespace dae
 			versusGo->AddComponent<TextComponent>(font, "VERSUS MODE");
 			scene.Add(std::move(versusGo));
 		}
+	}
+
+	std::vector<GameObject*> LevelLoader::RespawnEnemies(Scene& scene, GridComponent* pGrid,
+		const LevelData& data, GameMode mode,
+		GameObject* pPlayer1, GameObject* pPlayer2,
+		ScoreComponent* pScore1, ScoreComponent* pScore2)
+	{
+		GameObject* versusEnemy = nullptr;
+		auto enemies = CreateEnemies(scene, pGrid, data, mode, versusEnemy, pPlayer1);
+
+		// Rewire player collision and pump to new enemies
+		auto wirePlayer = [&](GameObject* pPlayer)
+		{
+			if (!pPlayer) return;
+
+			auto* collision = pPlayer->GetComponent<PlayerCollisionComponent>();
+			if (collision)
+			{
+				collision->ClearEnemies();
+				for (auto* enemy : enemies)
+					collision->AddEnemy(enemy);
+			}
+
+			auto* pump = pPlayer->GetComponent<PumpComponent>();
+			if (pump)
+			{
+				pump->ClearEnemies();
+				for (auto* enemy : enemies)
+					pump->AddEnemy(enemy);
+			}
+		};
+
+		wirePlayer(pPlayer1);
+		wirePlayer(pPlayer2);
+
+		// Register score observers on new enemies
+		auto wireScore = [&](ScoreComponent* pScore)
+		{
+			if (!pScore) return;
+			for (auto* enemy : enemies)
+			{
+				auto* enemyComp = enemy->GetComponent<EnemyComponent>();
+				if (enemyComp)
+					enemyComp->AddObserver(pScore);
+			}
+		};
+
+		wireScore(pScore1);
+		wireScore(pScore2);
+
+		// Wire rock observers to new enemies
+		// (rocks don't need rewiring — they check enemies by proximity each frame)
+
+		return enemies;
 	}
 }

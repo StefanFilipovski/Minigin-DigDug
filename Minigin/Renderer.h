@@ -1,5 +1,6 @@
 #pragma once
 #include <SDL3/SDL.h>
+#include <functional>
 #include "Singleton.h"
 
 namespace dae
@@ -11,6 +12,7 @@ namespace dae
 		SDL_Renderer* m_renderer{};
 		SDL_Window* m_window{};
 		SDL_Color m_clearColor{};
+		std::function<void()> m_postRenderCallback;
 	public:
 		void Init(SDL_Window* window);
 		void Render() const;
@@ -36,5 +38,8 @@ namespace dae
 
 		const SDL_Color& GetBackgroundColor() const { return m_clearColor; }
 		void SetBackgroundColor(const SDL_Color& color) { m_clearColor = color; }
+
+		void SetPostRenderCallback(std::function<void()> cb) { m_postRenderCallback = std::move(cb); }
+		void ClearPostRenderCallback() { m_postRenderCallback = nullptr; }
 	};
 }

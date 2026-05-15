@@ -51,6 +51,7 @@ namespace dae
 
 		const std::string& GetCurrentAnimation() const { return m_currentAnimation; }
 		int GetCurrentFrame() const { return m_currentFrame; }
+		bool IsAnimationFinished() const;
 
 	private:
 		void ApplyFrame();

@@ -80,6 +80,16 @@ namespace dae
 		ApplyFrame();
 	}
 
+	bool SpriteAnimatorComponent::IsAnimationFinished() const
+	{
+		if (m_currentAnimation.empty()) return false;
+		auto it = m_animations.find(m_currentAnimation);
+		if (it == m_animations.end()) return false;
+		const auto& anim = it->second;
+		if (anim.loop) return false; // looping animations never "finish"
+		return m_currentFrame >= static_cast<int>(anim.frames.size()) - 1;
+	}
+
 	void SpriteAnimatorComponent::SetRenderSize(float w, float h)
 	{
 		m_renderWidth = w;

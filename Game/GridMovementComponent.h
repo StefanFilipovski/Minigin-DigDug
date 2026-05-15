@@ -36,6 +36,9 @@ namespace dae
 		void SetSpeed(float speed) { m_speed = speed; }
 		float GetSpeed() const { return m_speed; }
 
+		void SetFrozen(bool frozen) { m_frozen = frozen; }
+		bool IsFrozen() const { return m_frozen; }
+
 		// True if the player is currently moving into a cell that was dirt
 		bool IsDigging() const { return m_isDigging; }
 
@@ -63,5 +66,6 @@ namespace dae
 		bool m_isMoving{ false };
 		bool m_inputActive{ false };
 		bool m_isDigging{ false };
+		bool m_frozen{ false };
 	};
 }

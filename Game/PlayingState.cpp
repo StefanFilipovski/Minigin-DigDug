@@ -14,6 +14,11 @@
 #include "GameObject.h"
 #include "TransformComponent.h"
 #include "TextComponent.h"
+#include "PlayerCollisionComponent.h"
+#include "ScoreComponent.h"
+#include "RockComponent.h"
+#include "EnemyComponent.h"
+#include "Renderer.h"
 #include "Command.h"
 #include <SDL3/SDL.h>
 #include <iostream>
@@ -81,10 +86,26 @@ namespace dae
 		sceneMgr.SetActiveScene("Game");
 		LoadLevel(m_currentRound);
 		BindInput();
+
+		// Register overlay callback for black screen transitions
+		Renderer::GetInstance().SetPostRenderCallback([this]()
+		{
+			if (!m_buildResult.pPlayer1) return;
+			auto* collision = m_buildResult.pPlayer1->GetComponent<PlayerCollisionComponent>();
+			if (collision && collision->IsInBlackScreen())
+			{
+				auto* renderer = Renderer::GetInstance().GetSDLRenderer();
+				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+				SDL_FRect fullScreen{ 0.f, 0.f, 640.f, 480.f };
+				SDL_RenderFillRect(renderer, &fullScreen);
+			}
+		});
 	}
 
 	void PlayingState::OnExit()
 	{
+		Renderer::GetInstance().ClearPostRenderCallback();
+
 		auto& session = GameSession::GetInstance();
 		session.SetCurrentRound(m_currentRound);
 	}
@@ -112,6 +133,28 @@ namespace dae
 			std::string filepath = GetLevelFilePath(round);
 			m_currentLevelData = LevelLoader::LoadFromFile(filepath);
 			m_buildResult = LevelLoader::BuildScene(*m_pScene, m_currentLevelData, m_gameMode);
+
+			// Wire death callbacks on player collision component
+			if (m_buildResult.pPlayer1)
+			{
+				auto* collision = m_buildResult.pPlayer1->GetComponent<PlayerCollisionComponent>();
+				if (collision)
+				{
+					collision->SetSoftResetCallback([this]() { SoftReset(); });
+					collision->SetGameOverCallback([this]()
+					{
+						// Save score to session before transitioning
+						auto& session = GameSession::GetInstance();
+						if (m_buildResult.pScore1)
+							session.SetPlayer1Score(m_buildResult.pScore1->GetScore());
+						session.SetCurrentRound(m_currentRound);
+
+						Renderer::GetInstance().ClearPostRenderCallback();
+						GameStateManager::GetInstance().SetState<GameOverState>();
+					});
+				}
+			}
+
 			std::cout << "[PlayingState] Loaded round " << round << " from " << filepath << "\n";
 		}
 		catch (const std::exception& e)
@@ -205,6 +248,63 @@ namespace dae
 
 			// TODO: A button = fire breath for versus Fygar
 		}
+	}
+
+	void PlayingState::SoftReset()
+	{
+		if (!m_pScene) return;
+
+		// Mark all old enemies for destruction
+		for (auto* enemy : m_buildResult.enemies)
+		{
+			if (enemy && !enemy->IsMarkedForDestroy())
+				enemy->MarkForDestroy();
+		}
+
+		// Re-create enemies from the original level data
+		auto newEnemies = LevelLoader::RespawnEnemies(
+			*m_pScene, m_buildResult.pGrid, m_currentLevelData, m_gameMode,
+			m_buildResult.pPlayer1, m_buildResult.pPlayer2,
+			m_buildResult.pScore1, m_buildResult.pScore2);
+
+		// Rewire surviving rocks with new enemy references
+		for (auto* rock : m_buildResult.rocks)
+		{
+			if (!rock || rock->IsMarkedForDestroy()) continue;
+			auto* rockComp = rock->GetComponent<RockComponent>();
+			if (!rockComp) continue;
+
+			rockComp->ClearEnemies();
+			for (auto* enemy : newEnemies)
+				rockComp->AddEnemy(enemy);
+		}
+
+		m_buildResult.enemies = newEnemies;
+
+		// Rebind input since enemies changed
+		BindInput();
+
+		// Re-set callbacks (they persist, but just to be safe after rebind)
+		if (m_buildResult.pPlayer1)
+		{
+			auto* collision = m_buildResult.pPlayer1->GetComponent<PlayerCollisionComponent>();
+			if (collision)
+			{
+				collision->SetSoftResetCallback([this]() { SoftReset(); });
+				collision->SetGameOverCallback([this]()
+				{
+					auto& session = GameSession::GetInstance();
+					if (m_buildResult.pScore1)
+						session.SetPlayer1Score(m_buildResult.pScore1->GetScore());
+					session.SetCurrentRound(m_currentRound);
+
+					Renderer::GetInstance().ClearPostRenderCallback();
+					GameStateManager::GetInstance().SetState<GameOverState>();
+				});
+			}
+		}
+
+		std::cout << "[PlayingState] Soft reset — enemies respawned, terrain preserved\n";
 	}
 
 	void PlayingState::SkipLevel()

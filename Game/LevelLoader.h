@@ -48,6 +48,7 @@ namespace dae
 		GameObject* pPlayer2{ nullptr };
 		GameObject* pVersusEnemy{ nullptr };
 		std::vector<GameObject*> enemies;
+		std::vector<GameObject*> rocks;
 		ScoreComponent* pScore1{ nullptr };
 		ScoreComponent* pScore2{ nullptr };
 	};
@@ -58,6 +59,12 @@ namespace dae
 		static LevelData LoadFromFile(const std::string& filepath);
 		static LevelBuildResult BuildScene(Scene& scene, const LevelData& data, GameMode mode);
 
+		// Re-create enemies for a soft-reset (preserves grid/terrain, resets enemies)
+		static std::vector<GameObject*> RespawnEnemies(Scene& scene, GridComponent* pGrid,
+			const LevelData& data, GameMode mode,
+			GameObject* pPlayer1, GameObject* pPlayer2,
+			ScoreComponent* pScore1, ScoreComponent* pScore2);
+
 	private:
 		static GridComponent* CreateGrid(Scene& scene, const LevelData& data);
 		static GameObject* CreatePlayer(Scene& scene, GridComponent* pGrid,
@@ -65,11 +72,13 @@ namespace dae
 		static std::vector<GameObject*> CreateEnemies(Scene& scene, GridComponent* pGrid,
 			const LevelData& data, GameMode mode, GameObject*& outVersusEnemy,
 			GameObject* pPlayerTarget);
-		static void CreateRocks(Scene& scene, GridComponent* pGrid, const LevelData& data,
+		static std::vector<GameObject*> CreateRocks(Scene& scene, GridComponent* pGrid,
+			const LevelData& data,
 			GameObject* pPlayer1, GameObject* pPlayer2,
 			const std::vector<GameObject*>& enemies,
 			ScoreComponent* pScore1 = nullptr, ScoreComponent* pScore2 = nullptr);
 		static void CreateHUD(Scene& scene, GameMode mode,
-			ScoreComponent* pScore1 = nullptr, ScoreComponent* pScore2 = nullptr);
+			ScoreComponent* pScore1 = nullptr, ScoreComponent* pScore2 = nullptr,
+			GameObject* pPlayer1 = nullptr, GameObject* pPlayer2 = nullptr);
 	};
 }

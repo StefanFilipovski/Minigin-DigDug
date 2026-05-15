@@ -51,6 +51,10 @@ void dae::Renderer::Render() const
 
 	SceneManager::GetInstance().Render();
 
+	// Post-scene overlay render (used for transitions like black screens)
+	if (m_postRenderCallback)
+		m_postRenderCallback();
+
 	ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), m_renderer);
 	SDL_RenderPresent(m_renderer);
 }
