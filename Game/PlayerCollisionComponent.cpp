@@ -81,6 +81,7 @@ namespace dae
 
 		// ---- Normal: check collision with each enemy ----
 		const auto& myPos = m_pMovement->GetGridPosition();
+		const auto& myTarget = m_pMovement->GetTargetGridPosition();
 
 		for (auto* pEnemy : m_enemies)
 		{
@@ -92,8 +93,19 @@ namespace dae
 			// Skip inflating enemies — they're safe to walk through
 			if (enemy->IsInflating()) continue;
 
-			// Grid collision — same cell
-			bool hit = (enemy->GetGridPosition() == myPos);
+			auto* enemyMovement = pEnemy->GetComponent<GridMovementComponent>();
+			const auto& enemyPos = enemy->GetGridPosition();
+
+			// Check all combinations of current/target positions for both
+			// player and enemy — this catches fast-moving ghosts that pass
+			// through the player's cell in a single frame
+			bool hit = (enemyPos == myPos) || (enemyPos == myTarget);
+
+			if (!hit && enemyMovement)
+			{
+				const auto& enemyTarget = enemyMovement->GetTargetGridPosition();
+				hit = (enemyTarget == myPos) || (enemyTarget == myTarget);
+			}
 
 			// Fire collision — check if player is in a Fygar's fire path
 			if (!hit && enemy->IsPositionInFire(myPos))

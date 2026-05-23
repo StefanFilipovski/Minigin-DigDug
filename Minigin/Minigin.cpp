@@ -84,7 +84,14 @@ dae::Minigin::Minigin(const std::filesystem::path& dataPath, const std::string& 
 
 dae::Minigin::~Minigin()
 {
-	// Destroy sound service before SDL shutdown
+	// Explicitly tear down singletons before VLD scans the heap.
+	// VLD hooks into atexit() and runs before C++ static destructors,
+	// so anything owned by a Meyers singleton appears as a "leak."
+	// Order: game state → input → scenes → resources → sound → renderer → SDL.
+	GameStateManager::GetInstance().Shutdown();
+	InputManager::GetInstance().Shutdown();
+	SceneManager::GetInstance().Shutdown();
+	ResourceManager::GetInstance().Shutdown();
 	ServiceLocator::RegisterSoundService(nullptr);
 
 	Renderer::GetInstance().Destroy();

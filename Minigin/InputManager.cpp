@@ -162,4 +162,12 @@ namespace dae
 		m_ControllerCommands.clear();
 		m_bindingsInvalidated = true;
 	}
+
+	void InputManager::Shutdown()
+	{
+		m_KeyboardCommands.clear();
+		m_ControllerCommands.clear();
+		m_commandGraveyard.clear();
+		m_Controllers.clear();
+	}
 }

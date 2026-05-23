@@ -11,6 +11,7 @@ namespace dae
 	class GridMovementComponent;
 	class SpriteAnimatorComponent;
 	class EnemyComponent;
+	class PlayerCollisionComponent;
 	class RenderComponent;
 	class Texture2D;
 	class GameObject;
@@ -47,6 +48,7 @@ namespace dae
 		GridComponent* m_pGrid;
 		GridMovementComponent* m_pMovement{ nullptr };
 		SpriteAnimatorComponent* m_pAnimator{ nullptr };
+		PlayerCollisionComponent* m_pCollision{ nullptr };
 		bool m_cached{ false };
 
 		std::vector<GameObject*> m_enemies;

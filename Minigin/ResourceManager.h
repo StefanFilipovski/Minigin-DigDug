@@ -18,6 +18,10 @@ namespace dae
 		// First load wins: if the file is loaded with a color key, that's what stays cached
 		std::shared_ptr<Texture2D> LoadTexture(const std::string& file, SDL_Color colorKey);
 		std::shared_ptr<Font> LoadFont(const std::string& file, uint8_t size);
+
+		// Explicit teardown — releases all cached resources before VLD scans
+		void Shutdown();
+
 	private:
 		friend class Singleton<ResourceManager>;
 		ResourceManager() = default;

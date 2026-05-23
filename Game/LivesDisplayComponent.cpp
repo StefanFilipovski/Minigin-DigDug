@@ -7,8 +7,9 @@
 
 namespace dae
 {
-	LivesDisplayComponent::LivesDisplayComponent(GameObject* pOwner)
+	LivesDisplayComponent::LivesDisplayComponent(GameObject* pOwner, const std::string& prefix)
 		: Component(pOwner)
+		, m_prefix(prefix)
 	{
 	}
 
@@ -23,6 +24,6 @@ namespace dae
 		auto* pText = GetOwner()->GetComponent<TextComponent>();
 		if (!pText) return;
 
-		pText->SetText("Lives: " + std::to_string(pCollision->GetLives()));
+		pText->SetText(m_prefix + std::to_string(pCollision->GetLives()));
 	}
 }

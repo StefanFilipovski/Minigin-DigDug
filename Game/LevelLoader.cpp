@@ -132,36 +132,41 @@ namespace dae
 			pScore1, pScore2);
 		CreateHUD(scene, mode, pScore1, pScore2, result.pPlayer1, result.pPlayer2);
 
-		// Wire up collision and pump — both need the full enemy list
-		if (result.pPlayer1)
+		// Wire up collision, pump, and scoring for each player
+		auto wirePlayer = [&](GameObject* pPlayer, const glm::ivec2& spawnPos,
+			ScoreComponent*& outScore)
 		{
-			auto* collision = result.pPlayer1->GetComponent<PlayerCollisionComponent>();
+			if (!pPlayer) return;
+
+			auto* collision = pPlayer->GetComponent<PlayerCollisionComponent>();
 			if (collision)
 			{
-				collision->SetSpawnPos(data.playerSpawn);
+				collision->SetSpawnPos(spawnPos);
 				for (auto* enemy : result.enemies)
 					collision->AddEnemy(enemy);
 			}
 
-			auto* pump = result.pPlayer1->GetComponent<PumpComponent>();
+			auto* pump = pPlayer->GetComponent<PumpComponent>();
 			if (pump)
 			{
 				for (auto* enemy : result.enemies)
 					pump->AddEnemy(enemy);
 			}
 
-			// Wire up scoring: register player's ScoreComponent as observer on each enemy
-			result.pScore1 = result.pPlayer1->GetComponent<ScoreComponent>();
-			if (result.pScore1)
+			outScore = pPlayer->GetComponent<ScoreComponent>();
+			if (outScore)
 			{
 				for (auto* enemy : result.enemies)
 				{
 					auto* enemyComp = enemy->GetComponent<EnemyComponent>();
 					if (enemyComp)
-						enemyComp->AddObserver(result.pScore1);
+						enemyComp->AddObserver(outScore);
 				}
 			}
-		}
+		};
+
+		wirePlayer(result.pPlayer1, data.playerSpawn, result.pScore1);
+		wirePlayer(result.pPlayer2, data.player2Spawn, result.pScore2);
 
 		return result;
 	}
@@ -521,13 +526,27 @@ namespace dae
 
 		if (mode == GameMode::CoOp)
 		{
+			// Player 2 score display
 			auto score2Go = std::make_unique<GameObject>();
-			score2Go->AddComponent<TransformComponent>()->SetLocalPosition(10.f, 550.f);
+			score2Go->AddComponent<TransformComponent>()->SetLocalPosition(500.f, 5.f);
 			score2Go->AddComponent<TextComponent>(font, "P2 Score: 0");
-			auto* score2Display = score2Go->AddComponent<PointsDisplayComponent>();
+			auto* score2Display = score2Go->AddComponent<PointsDisplayComponent>("P2 Score: ");
 			if (pScore2)
 				pScore2->AddObserver(score2Display);
 			scene.Add(std::move(score2Go));
+
+			// Player 2 lives display
+			auto lives2Go = std::make_unique<GameObject>();
+			lives2Go->AddComponent<TransformComponent>()->SetLocalPosition(500.f, 25.f);
+			lives2Go->AddComponent<TextComponent>(font, "P2 Lives: 4");
+			auto* lives2Display = lives2Go->AddComponent<LivesDisplayComponent>("P2 Lives: ");
+			if (pPlayer2)
+			{
+				auto* collision2 = pPlayer2->GetComponent<PlayerCollisionComponent>();
+				if (collision2)
+					collision2->AddObserver(lives2Display);
+			}
+			scene.Add(std::move(lives2Go));
 		}
 
 		if (mode == GameMode::Versus)

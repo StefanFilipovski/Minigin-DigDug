@@ -26,6 +26,9 @@ namespace dae
 		void Render();
 		void RenderImGui();
 
+		// Explicit teardown — call before VLD scans to silence false positives
+		void Shutdown();
+
 	private:
 		friend class Singleton<SceneManager>;
 		SceneManager() = default;

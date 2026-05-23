@@ -71,6 +71,17 @@ namespace dae
 
 		GameState* GetCurrentState() const { return m_pCurrentState; }
 
+		// Explicit teardown — releases all states before VLD scans
+		void Shutdown()
+		{
+			if (m_pCurrentState)
+			{
+				m_pCurrentState->OnExit();
+				m_pCurrentState = nullptr;
+			}
+			m_States.clear();
+		}
+
 	private:
 		friend class Singleton<GameStateManager>;
 		GameStateManager() = default;

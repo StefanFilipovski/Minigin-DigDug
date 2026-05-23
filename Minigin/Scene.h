@@ -28,5 +28,7 @@ namespace dae
 		explicit Scene() = default;
 
 		std::vector<std::unique_ptr<GameObject>> m_Objects{};
+		std::vector<std::unique_ptr<GameObject>> m_PendingAdds{};
+		bool m_isUpdating{ false };
 	};
 }

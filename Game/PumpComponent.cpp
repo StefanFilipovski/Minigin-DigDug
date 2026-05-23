@@ -3,6 +3,7 @@
 #include "GridMovementComponent.h"
 #include "SpriteAnimatorComponent.h"
 #include "EnemyComponent.h"
+#include "PlayerCollisionComponent.h"
 #include "RenderComponent.h"
 #include "TransformComponent.h"
 #include "Renderer.h"
@@ -34,6 +35,7 @@ namespace dae
 		if (m_cached) return;
 		m_pMovement = GetOwner()->GetComponent<GridMovementComponent>();
 		m_pAnimator = GetOwner()->GetComponent<SpriteAnimatorComponent>();
+		m_pCollision = GetOwner()->GetComponent<PlayerCollisionComponent>();
 		m_cached = true;
 	}
 
@@ -52,6 +54,9 @@ namespace dae
 	{
 		CacheComponents();
 		if (!m_pMovement) return;
+
+		// Don't allow pumping while dead — prevents overriding the die animation
+		if (m_pCollision && m_pCollision->IsDead()) return;
 
 		// Mark button as held this frame (cleared at end of Update)
 		m_fireButtonHeld = true;
@@ -98,6 +103,15 @@ namespace dae
 	void PumpComponent::Update(float deltaTime)
 	{
 		CacheComponents();
+
+		// Don't process pump logic while dead — avoids animation conflicts with death sequence
+		if (m_pCollision && m_pCollision->IsDead())
+		{
+			// Still clear held state so we don't get a stale "held" on respawn
+			m_fireButtonHeld = false;
+			m_fireButtonHeldPrev = false;
+			return;
+		}
 
 		// Prune enemies destroyed last frame so we never chase dangling pointers.
 		// Safe here because Scene::Update() calls all object Updates before freeing marked objects.

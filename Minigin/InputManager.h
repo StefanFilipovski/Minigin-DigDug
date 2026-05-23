@@ -36,6 +36,9 @@ namespace dae
 		void ClearKeyboardBindings();
 		void ClearControllerBindings();
 
+		// Explicit teardown — releases all bindings and controllers before VLD scans
+		void Shutdown();
+
 	private:
 		friend class Singleton<InputManager>;
 		InputManager() = default;

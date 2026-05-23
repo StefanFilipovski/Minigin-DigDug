@@ -7,8 +7,9 @@
 
 namespace dae
 {
-	PointsDisplayComponent::PointsDisplayComponent(GameObject* pOwner)
+	PointsDisplayComponent::PointsDisplayComponent(GameObject* pOwner, const std::string& prefix)
 		: Component(pOwner)
+		, m_prefix(prefix)
 	{
 	}
 
@@ -23,6 +24,6 @@ namespace dae
 		auto* pText = GetOwner()->GetComponent<TextComponent>();
 		if (!pText) return;
 
-		pText->SetText("Score: " + std::to_string(pScore->GetScore()));
+		pText->SetText(m_prefix + std::to_string(pScore->GetScore()));
 	}
 }

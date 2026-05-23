@@ -88,4 +88,10 @@ namespace dae
 		if (auto* scene = GetActiveScene())
 			scene->RenderImGui();
 	}
+
+	void SceneManager::Shutdown()
+	{
+		m_scenes.clear();
+		m_activeSceneIndex = 0;
+	}
 }

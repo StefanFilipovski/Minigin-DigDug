@@ -7,7 +7,10 @@ using namespace dae;
 void Scene::Add(std::unique_ptr<GameObject> object)
 {
 	assert(object != nullptr);
-	m_Objects.emplace_back(std::move(object));
+	if (m_isUpdating)
+		m_PendingAdds.emplace_back(std::move(object));
+	else
+		m_Objects.emplace_back(std::move(object));
 }
 
 void Scene::Remove(const GameObject& object)
@@ -26,15 +29,26 @@ void Scene::RemoveAll()
 
 void Scene::Update(float deltaTime)
 {
-	// Update objects regardless of hierarchy
-		for (auto& object : m_Objects)
-		object->Update(deltaTime);
-
-	// Clean up dead objects
+	// Clean up objects that were marked for destruction in the previous frame.
+	// Deferring by one frame lets game-state code (which runs before Scene::Update)
+	// safely call IsMarkedForDestroy() to prune its own raw pointers before
+	// the objects are actually freed.
 	m_Objects.erase(
 		std::remove_if(m_Objects.begin(), m_Objects.end(),
 			[](const auto& ptr) { return ptr->IsMarkedForDestroy(); }),
 		m_Objects.end());
+
+	// Update surviving objects — additions during this loop are buffered
+	// so that m_Objects isn't reallocated while we iterate it.
+	m_isUpdating = true;
+	for (auto& object : m_Objects)
+		object->Update(deltaTime);
+	m_isUpdating = false;
+
+	// Flush any objects that were added during the update
+	for (auto& pending : m_PendingAdds)
+		m_Objects.emplace_back(std::move(pending));
+	m_PendingAdds.clear();
 }
 
 void Scene::FixedUpdate(float fixedTimeStep)

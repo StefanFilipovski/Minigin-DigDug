@@ -31,6 +31,10 @@ namespace dae
 		void LoadLevel(int round);
 		void BindInput();
 		void SoftReset();
+		void AdvanceLevel();
+		void WirePlayerCallbacks();
+		void HandleGameOver();
+		void SaveScoresToSession();
 		std::string GetLevelFilePath(int round) const;
 
 		GameMode m_gameMode{ GameMode::SinglePlayer };

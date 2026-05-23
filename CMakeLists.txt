@@ -112,7 +112,24 @@ endif()
 
 # --- VLD (optional) ---
 if (WIN32)
-  find_package(VLD CONFIG)
+  # Look for VLD next to the project (common student setup)
+  set(VLD_SEARCH_PATHS
+    "${CMAKE_SOURCE_DIR}/../Visual Leak Detector"
+    "C:/Program Files (x86)/Visual Leak Detector"
+    "C:/Program Files/Visual Leak Detector"
+  )
+  foreach(vld_path IN LISTS VLD_SEARCH_PATHS)
+    if(EXISTS "${vld_path}/cmake/VLDConfig.cmake")
+      set(VLD_DIR "${vld_path}/cmake" CACHE PATH "VLD cmake config directory" FORCE)
+      break()
+    endif()
+  endforeach()
+  find_package(VLD CONFIG QUIET)
+  if(VLD_FOUND)
+    message(STATUS "VLD found: ${VLD_INCLUDE_DIR}")
+  else()
+    message(STATUS "VLD NOT found - leak detection disabled")
+  endif()
 endif()
 
 # --- Steamworks (optional) ---
@@ -293,6 +310,25 @@ elseif(WIN32)
       COMMAND "${CMAKE_COMMAND}" -E echo "480" > "$<TARGET_FILE_DIR:DigDug>/steam_appid.txt"
       COMMENT "Generating steam_appid.txt"
     )
+  endif()
+
+  # Copy VLD runtime DLLs to output folder (leak detection)
+  if(VLD_FOUND)
+    set(VLD_BIN_DIR "${VLD_DIR}/../bin/Win64")
+    set(VLD_RUNTIME_FILES
+      "${VLD_BIN_DIR}/vld_x64.dll"
+      "${VLD_BIN_DIR}/dbghelp.dll"
+      "${VLD_BIN_DIR}/symsrv.dll"
+      "${VLD_BIN_DIR}/Microsoft.DTfW.DHL.manifest"
+    )
+    foreach(vldFile IN LISTS VLD_RUNTIME_FILES)
+      add_custom_command(TARGET DigDug POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${vldFile}"
+            "$<TARGET_FILE_DIR:DigDug>"
+        VERBATIM
+      )
+    endforeach()
   endif()
 
   # Copy Data folder to output directory
