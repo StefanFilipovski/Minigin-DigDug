@@ -9,6 +9,8 @@
 #include "GameObject.h"
 #include "TransformComponent.h"
 #include "TextComponent.h"
+#include "ServiceLocator.h"
+#include "GameSounds.h"
 #include "Command.h"
 #include <SDL3/SDL.h>
 #include <string>
@@ -67,6 +69,10 @@ namespace dae
 		}
 
 		sceneMgr.SetActiveScene("HighScore");
+
+		// Stop the Game Over fanfare (a long one-shot) before the entry jingle
+		ServiceLocator::GetSoundService().StopAllSounds();
+		ServiceLocator::GetSoundService().PlaySound(Sounds::NameEntry);
 
 		// Load existing high scores
 		GameSession::GetInstance().LoadHighScores(HighScoreFilePath);

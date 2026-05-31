@@ -39,13 +39,24 @@ namespace dae
 		// Callback for game over (transition to game over state)
 		void SetGameOverCallback(std::function<void()> cb) { m_gameOverCallback = std::move(cb); }
 
+		// ---- Co-op shared-lives mode ----
+		// In this mode the component only plays the death animation; lives and
+		// respawn/game-over are coordinated externally by PlayingState. After the
+		// death animation it parks in AwaitingRespawn until PlayingState calls
+		// Respawn(). No full-screen black-out is used so the other player keeps
+		// playing uninterrupted.
+		void SetCoopShared(bool shared) { m_coopShared = shared; }
+		void SetOnDeathStartCallback(std::function<void()> cb) { m_onDeathStartCallback = std::move(cb); }
+		bool IsAwaitingRespawn() const { return m_deathPhase == DeathPhase::AwaitingRespawn; }
+
 	private:
 		enum class DeathPhase
 		{
 			None,
 			DyingAnimation,
 			BlackScreen,
-			SoftReset
+			SoftReset,
+			AwaitingRespawn   // co-op: death anim done, waiting for PlayingState
 		};
 
 		GridComponent* m_pGrid;
@@ -68,6 +79,8 @@ namespace dae
 
 		std::function<void()> m_softResetCallback;
 		std::function<void()> m_gameOverCallback;
+		std::function<void()> m_onDeathStartCallback;
+		bool m_coopShared{ false };
 
 		void SoftReset();
 	};

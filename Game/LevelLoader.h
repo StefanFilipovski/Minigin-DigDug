@@ -57,7 +57,10 @@ namespace dae
 	{
 	public:
 		static LevelData LoadFromFile(const std::string& filepath);
-		static LevelBuildResult BuildScene(Scene& scene, const LevelData& data, GameMode mode);
+		// versusPlayerLives sets Dig Dug's starting lives in Versus mode (so a
+		// round restart can carry the remaining count into the rebuilt scene).
+		static LevelBuildResult BuildScene(Scene& scene, const LevelData& data, GameMode mode,
+			int versusPlayerLives = 3);
 
 		// Re-create enemies for a soft-reset (preserves grid/terrain, resets enemies)
 		static std::vector<GameObject*> RespawnEnemies(Scene& scene, GridComponent* pGrid,

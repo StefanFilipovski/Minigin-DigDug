@@ -9,6 +9,7 @@ namespace dae
 	enum class EnemyStateType
 	{
 		Normal,
+		Idle, // Player-controlled: no AI, just animations
 		Ghost,
 		Inflating,
 		Popped,
@@ -26,6 +27,33 @@ namespace dae
 		virtual std::unique_ptr<EnemyState> Update(EnemyComponent& enemy, float deltaTime) = 0;
 		virtual void Exit(EnemyComponent& enemy) = 0;
 		virtual EnemyStateType GetType() const = 0;
+	};
+
+	// Player-controlled idle state — no AI, just updates walk animation based on movement
+	class EnemyIdleState final : public EnemyState
+	{
+	public:
+		void Enter(EnemyComponent& enemy) override;
+		std::unique_ptr<EnemyState> Update(EnemyComponent& enemy, float deltaTime) override;
+		void Exit(EnemyComponent& enemy) override;
+		EnemyStateType GetType() const override { return EnemyStateType::Idle; }
+	};
+
+	// Player-controlled ghost (Versus Fygar) — no AI, the player drives movement
+	// while phasing through dirt. Exits back to Idle once it reaches an empty
+	// cell after having entered the dirt (so it never surfaces inside the ground).
+	class EnemyPlayerGhostState final : public EnemyState
+	{
+	public:
+		void Enter(EnemyComponent& enemy) override;
+		std::unique_ptr<EnemyState> Update(EnemyComponent& enemy, float deltaTime) override;
+		void Exit(EnemyComponent& enemy) override;
+		EnemyStateType GetType() const override { return EnemyStateType::Ghost; }
+
+	private:
+		bool m_hasBeenInDirt{ false };
+		float m_timer{ 0.f };
+		float m_maxDuration{ 5.f }; // safety cap so the player can't ghost forever
 	};
 
 	// Normal tunnel movement — chases the player, decides ghost/fire transitions

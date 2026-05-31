@@ -10,6 +10,8 @@
 #include "ResourceManager.h"
 #include "Texture2D.h"
 #include "GameObject.h"
+#include "ServiceLocator.h"
+#include "GameSounds.h"
 #include <algorithm>
 
 namespace dae
@@ -87,6 +89,8 @@ namespace dae
 
 			m_hoseLength = 0.f;
 			m_state = PumpState::Extending;
+
+			ServiceLocator::GetSoundService().PlaySound(Sounds::PumpShot);
 
 			CalculateRange();
 

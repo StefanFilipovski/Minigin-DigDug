@@ -42,6 +42,11 @@ namespace dae
 		// No-op if the requested animation is already playing
 		void Play(const std::string& name);
 
+		// Like Play, but always restarts from frame 0 and re-applies the source
+		// rect even if the animation is already current. Use this after the
+		// render state may have been cleared (e.g. respawn after a death).
+		void Restart(const std::string& name);
+
 		void SetRenderSize(float w, float h);
 		void SetAnimationRenderSize(const std::string& name, float w, float h);
 

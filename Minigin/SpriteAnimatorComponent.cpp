@@ -80,6 +80,20 @@ namespace dae
 		ApplyFrame();
 	}
 
+	void SpriteAnimatorComponent::Restart(const std::string& name)
+	{
+		auto it = m_animations.find(name);
+		if (it == m_animations.end())
+			return;
+
+		m_currentAnimation = name;
+		m_currentFrame = 0;
+		m_frameTimer = 0.f;
+		m_paused = false;
+
+		ApplyFrame();
+	}
+
 	bool SpriteAnimatorComponent::IsAnimationFinished() const
 	{
 		if (m_currentAnimation.empty()) return false;

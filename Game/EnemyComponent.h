@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <string>
 #include <memory>
+#include <vector>
 #include <SDL3/SDL.h>
 
 namespace dae
@@ -27,6 +28,20 @@ namespace dae
 	public:
 		EnemyComponent(GameObject* pOwner, GridComponent* pGrid,
 			EnemyType type, GameObject* pTarget);
+
+		void AddTarget(GameObject* pTarget);
+		void ClearTargets();
+
+		// Player-controlled mode (Versus Fygar) — disables AI, allows external commands
+		void SetPlayerControlled(bool controlled);
+		bool IsPlayerControlled() const { return m_playerControlled; }
+		void StartFireBreath();
+
+		// Player-controlled ghost form (Versus Fygar) — phase through dirt
+		void StartGhost();
+		void StartGhostCooldown() { m_ghostCooldownRemaining = GhostCooldownDuration; }
+		bool IsGhostReady() const { return m_ghostCooldownRemaining <= 0.f; }
+		float GetGhostCooldownRemaining() const { return m_ghostCooldownRemaining; }
 
 		void Update(float deltaTime) override;
 		void FixedUpdate(float fixedTimeStep) override;
@@ -55,7 +70,7 @@ namespace dae
 		GridMovementComponent* GetMovement() const;
 		SpriteAnimatorComponent* GetAnimator() const;
 		GridComponent* GetGrid() const { return m_pGrid; }
-		GameObject* GetTarget() const { return m_pTarget; }
+		GameObject* GetTarget() const;
 
 		const std::string& GetLastHorizontalAnim() const { return m_lastHorizontalAnim; }
 		void SetLastHorizontalAnim(const std::string& anim) { m_lastHorizontalAnim = anim; }
@@ -81,7 +96,8 @@ namespace dae
 		mutable bool m_cached{ false };
 
 		EnemyType m_type;
-		GameObject* m_pTarget;
+		GameObject* m_pTarget; // primary target (backward compat)
+		std::vector<GameObject*> m_targets; // all player targets for closest-player logic
 
 		std::unique_ptr<EnemyState> m_pCurrentState;
 		bool m_stateInitialized{ false };
@@ -97,6 +113,11 @@ namespace dae
 
 		glm::ivec2 m_lastAttackDirection{ 0, 0 };
 		bool m_crushedByRock{ false };
+		bool m_playerControlled{ false };
+
+		// Ghost-form cooldown for the player-controlled Versus Fygar
+		static constexpr float GhostCooldownDuration{ 4.f };
+		float m_ghostCooldownRemaining{ 0.f };
 
 		// Fire rendering (Fygar only)
 		std::shared_ptr<Texture2D> m_fireTexture;

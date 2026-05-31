@@ -37,7 +37,7 @@
 
   "enemies": [
     { "type": "Pooka", "x": 3, "y": 6 },
-    { "type": "Pooka", "x": 14, "y": 6 },
+    { "type": "Fygar", "x": 14, "y": 6 },
     { "type": "Pooka", "x": 8, "y": 10 },
     { "type": "Pooka", "x": 11, "y": 10 }
   ],

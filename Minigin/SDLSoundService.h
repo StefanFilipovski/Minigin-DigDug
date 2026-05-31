@@ -17,6 +17,8 @@ namespace dae
 
 		void PlaySound(const std::string& filePath, int volume = 128) override;
 		void StopAllSounds() override;
+		void PlayMusic(const std::string& filePath, bool loop = true) override;
+		void StopMusic() override;
 
 	private:
 		class Impl;

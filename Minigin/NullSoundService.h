@@ -9,5 +9,7 @@ namespace dae
 	public:
 		void PlaySound(const std::string&, int) override {}
 		void StopAllSounds() override {}
+		void PlayMusic(const std::string&, bool) override {}
+		void StopMusic() override {}
 	};
 }

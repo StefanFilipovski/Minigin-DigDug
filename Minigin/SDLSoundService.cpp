@@ -1,4 +1,5 @@
 #include "SDLSoundService.h"
+#include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>
 #include <queue>
 #include <mutex>
@@ -12,10 +13,11 @@ namespace dae
 	// Sound request pushed onto the event queue
 	struct SoundRequest
 	{
-		enum class Type { Play, StopAll };
+		enum class Type { Play, StopAll, PlayMusic, StopMusic };
 		Type type{};
 		std::string filePath;
 		int volume{ 128 };
+		bool loop{ false };
 	};
 
 	// Pimpl — all SDL_mixer usage is contained here
@@ -53,8 +55,16 @@ namespace dae
 			if (m_workerThread.joinable())
 				m_workerThread.join();
 
-			// Audio objects are freed by MIX_Quit, but clear the cache map
+			// Destroy the music track before the mixer that owns it
+			if (m_pMusicTrack)
+			{
+				MIX_DestroyTrack(m_pMusicTrack);
+				m_pMusicTrack = nullptr;
+			}
+
+			// Audio objects are freed by MIX_Quit, but clear the cache maps
 			m_loadedSounds.clear();
+			m_loadedMusic.clear();
 
 			if (m_pMixer)
 				MIX_DestroyMixer(m_pMixer);
@@ -72,7 +82,21 @@ namespace dae
 		void QueueStopAll()
 		{
 			std::lock_guard lock(m_mutex);
-			m_queue.push({ SoundRequest::Type::StopAll, "", 0 });
+			m_queue.push({ SoundRequest::Type::StopAll, "", 0, false });
+			m_cv.notify_one();
+		}
+
+		void QueuePlayMusic(const std::string& filePath, bool loop)
+		{
+			std::lock_guard lock(m_mutex);
+			m_queue.push({ SoundRequest::Type::PlayMusic, filePath, 128, loop });
+			m_cv.notify_one();
+		}
+
+		void QueueStopMusic()
+		{
+			std::lock_guard lock(m_mutex);
+			m_queue.push({ SoundRequest::Type::StopMusic, "", 0, false });
 			m_cv.notify_one();
 		}
 
@@ -102,6 +126,13 @@ namespace dae
 				case SoundRequest::Type::StopAll:
 					if (m_pMixer)
 						MIX_StopAllTracks(m_pMixer, 0);
+					break;
+				case SoundRequest::Type::PlayMusic:
+					HandlePlayMusic(request.filePath, request.loop);
+					break;
+				case SoundRequest::Type::StopMusic:
+					if (m_pMusicTrack)
+						MIX_StopTrack(m_pMusicTrack, 0);
 					break;
 				}
 			}
@@ -137,7 +168,53 @@ namespace dae
 			}
 		}
 
+		void HandlePlayMusic(const std::string& filePath, bool loop)
+		{
+			if (!m_pMixer) return;
+
+			// Music is streamed (predecode = false) rather than fully decoded —
+			// this loops long tracks smoothly and avoids large memory spikes.
+			MIX_Audio* audio = nullptr;
+			auto it = m_loadedMusic.find(filePath);
+			if (it != m_loadedMusic.end())
+			{
+				audio = it->second;
+			}
+			else
+			{
+				audio = MIX_LoadAudio(m_pMixer, filePath.c_str(), false);
+				if (audio)
+					m_loadedMusic[filePath] = audio;
+				else
+				{
+					SDL_Log("SDLSoundService: failed to load music %s: %s",
+						filePath.c_str(), SDL_GetError());
+					return;
+				}
+			}
+
+			// One dedicated track for music — created lazily, reused thereafter.
+			if (!m_pMusicTrack)
+			{
+				m_pMusicTrack = MIX_CreateTrack(m_pMixer);
+				if (!m_pMusicTrack)
+				{
+					SDL_Log("SDLSoundService: MIX_CreateTrack failed: %s", SDL_GetError());
+					return;
+				}
+			}
+
+			MIX_StopTrack(m_pMusicTrack, 0);
+			MIX_SetTrackAudio(m_pMusicTrack, audio);
+
+			SDL_PropertiesID props = SDL_CreateProperties();
+			SDL_SetNumberProperty(props, MIX_PROP_PLAY_LOOPS_NUMBER, loop ? -1 : 0);
+			MIX_PlayTrack(m_pMusicTrack, props);
+			SDL_DestroyProperties(props);
+		}
+
 		MIX_Mixer* m_pMixer{ nullptr };
+		MIX_Track* m_pMusicTrack{ nullptr };
 
 		std::queue<SoundRequest> m_queue;
 		std::mutex m_mutex;
@@ -145,8 +222,9 @@ namespace dae
 		std::thread m_workerThread;
 		bool m_running{ false };
 
-		// Sound cache — only accessed from the worker thread
+		// Sound caches — only accessed from the worker thread
 		std::unordered_map<std::string, MIX_Audio*> m_loadedSounds;
+		std::unordered_map<std::string, MIX_Audio*> m_loadedMusic;
 	};
 
 	// SDLSoundService forwards everything to the Impl
@@ -166,5 +244,15 @@ namespace dae
 	void SDLSoundService::StopAllSounds()
 	{
 		m_pImpl->QueueStopAll();
+	}
+
+	void SDLSoundService::PlayMusic(const std::string& filePath, bool loop)
+	{
+		m_pImpl->QueuePlayMusic(filePath, loop);
+	}
+
+	void SDLSoundService::StopMusic()
+	{
+		m_pImpl->QueueStopMusic();
 	}
 }

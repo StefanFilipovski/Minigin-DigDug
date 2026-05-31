@@ -10,6 +10,9 @@
 #include "SDLSoundService.h"
 #include "GridMoveCommand.h"
 #include "PumpCommand.h"
+#include "FireBreathCommand.h"
+#include "GhostCommand.h"
+#include "GameSounds.h"
 #include "Scene.h"
 #include "GameObject.h"
 #include "TransformComponent.h"
@@ -63,7 +66,7 @@ namespace dae
 	public:
 		void Execute() override
 		{
-			ServiceLocator::GetSoundService().PlaySound("Data/pop.wav");
+			ServiceLocator::GetSoundService().PlaySound(Sounds::MonsterBlow);
 			std::cout << "[Test Sound Played]\n";
 		}
 	};
@@ -85,6 +88,22 @@ namespace dae
 		}
 
 		sceneMgr.SetActiveScene("Game");
+
+		// Fresh Versus match state (LoadLevel/ResetVersusRound manage it after this)
+		if (m_gameMode == GameMode::Versus)
+		{
+			m_fygarLives = VersusStartLives;
+			m_versusEnded = false;
+			m_pendingVersusReset = false;
+		}
+
+		// Fresh co-op shared-lives pool (persists across levels)
+		if (m_gameMode == GameMode::CoOp)
+		{
+			m_coopLives = CoopStartLives;
+			m_coopEnded = false;
+		}
+
 		LoadLevel(m_currentRound);
 		BindInput();
 
@@ -107,11 +126,15 @@ namespace dae
 				SDL_RenderFillRect(renderer, &fullScreen);
 			}
 		});
+
+		// Looping gameplay music
+		ServiceLocator::GetSoundService().PlayMusic(Sounds::GameMusic);
 	}
 
 	void PlayingState::OnExit()
 	{
 		Renderer::GetInstance().ClearPostRenderCallback();
+		ServiceLocator::GetSoundService().StopMusic();
 
 		auto& session = GameSession::GetInstance();
 		session.SetCurrentRound(m_currentRound);
@@ -120,6 +143,14 @@ namespace dae
 	void PlayingState::Update(float deltaTime)
 	{
 		(void)deltaTime;
+
+		// Versus: a death scheduled a position reset. Do it here (outside any
+		// scene object's Update) so we never rebuild the Fygar mid-update.
+		if (m_pendingVersusReset)
+		{
+			ResetVersusRound();
+			return;
+		}
 
 		// Nullify destroyed enemy pointers (instead of erasing) to preserve
 		// the 1:1 index correspondence with m_currentLevelData.enemies.
@@ -136,6 +167,22 @@ namespace dae
 			std::remove_if(m_buildResult.rocks.begin(), m_buildResult.rocks.end(),
 				[](const GameObject* go) { return !go || go->IsMarkedForDestroy(); }),
 			m_buildResult.rocks.end());
+
+		// Versus has its own win/lose + Fygar-respawn rules.
+		if (m_gameMode == GameMode::Versus)
+		{
+			UpdateVersus();
+			return;
+		}
+
+		// Co-op: coordinate shared-lives deaths (waits for all death animations,
+		// then resets both players or ends the game). If a death is in progress
+		// this returns true and we skip the win check this frame.
+		if (m_gameMode == GameMode::CoOp)
+		{
+			if (CoopHandleDeaths())
+				return;
+		}
 
 		// Don't check win condition while any player is in the death sequence
 		auto isPlayerDying = [](GameObject* p) -> bool
@@ -180,7 +227,7 @@ namespace dae
 	{
 	}
 
-	void PlayingState::LoadLevel(int round)
+	void PlayingState::LoadLevel(int round, int versusPlayerLives)
 	{
 		if (!m_pScene) return;
 
@@ -188,10 +235,48 @@ namespace dae
 		{
 			std::string filepath = GetLevelFilePath(round);
 			m_currentLevelData = LevelLoader::LoadFromFile(filepath);
-			m_buildResult = LevelLoader::BuildScene(*m_pScene, m_currentLevelData, m_gameMode);
+
+			// Versus: the arena holds exactly the human Dig Dug and ONE
+			// player-controlled Fygar — strip every other enemy from the data.
+			if (m_gameMode == GameMode::Versus)
+			{
+				EnemySpawn fygarSpawn{};
+				bool found = false;
+				for (const auto& e : m_currentLevelData.enemies)
+				{
+					if (e.type == EnemySpawn::Type::Fygar)
+					{
+						fygarSpawn = e;
+						found = true;
+						break;
+					}
+				}
+				m_currentLevelData.enemies.clear();
+				if (found)
+					m_currentLevelData.enemies.push_back(fygarSpawn);
+			}
+
+			m_buildResult = LevelLoader::BuildScene(*m_pScene, m_currentLevelData, m_gameMode,
+				versusPlayerLives);
 
 			// Wire death callbacks on both players' collision components
 			WirePlayerCallbacks();
+
+			// Versus: player lives set in BuildScene; refresh the Fygar-lives HUD.
+			// (The Fygar life count is owned by PlayingState and restored by the
+			// caller on a round restart.)
+			if (m_gameMode == GameMode::Versus)
+			{
+				m_versusEnded = false;
+				SetupVersusHUD();
+			}
+
+			// Co-op: shared lives HUD (the count itself persists across levels)
+			if (m_gameMode == GameMode::CoOp)
+			{
+				SetupCoopHUD();
+				UpdateCoopLivesHUD();
+			}
 
 			std::cout << "[PlayingState] Loaded round " << round << " from " << filepath << "\n";
 		}
@@ -220,7 +305,7 @@ namespace dae
 		input.BindKeyboardCommand(SDL_SCANCODE_F3, KeyState::Down,
 			std::make_unique<TestSoundCommand>());
 
-		// Player 1: WASD (keyboard)
+		// Player 1: WASD + Space (keyboard always)
 		if (m_buildResult.pPlayer1)
 		{
 			auto* p1 = m_buildResult.pPlayer1;
@@ -233,29 +318,27 @@ namespace dae
 				std::make_unique<GridMoveCommand>(p1, glm::ivec2{ -1, 0 }));
 			input.BindKeyboardCommand(SDL_SCANCODE_D, KeyState::Pressed,
 				std::make_unique<GridMoveCommand>(p1, glm::ivec2{ 1, 0 }));
-
-			// Pump attack: Space (keyboard) and A (controller)
-			// Pressed = fires every frame while held, so PumpComponent can
-			// distinguish tap vs hold and auto-pump at a slower rate.
 			input.BindKeyboardCommand(SDL_SCANCODE_SPACE, KeyState::Pressed,
 				std::make_unique<PumpCommand>(p1));
 
-			// Player 1: Controller 0 (DPad)
-			input.BindControllerCommand(0, Controller::Button::DPadUp, KeyState::Pressed,
-				std::make_unique<GridMoveCommand>(p1, glm::ivec2{ 0, -1 }));
-			input.BindControllerCommand(0, Controller::Button::DPadDown, KeyState::Pressed,
-				std::make_unique<GridMoveCommand>(p1, glm::ivec2{ 0, 1 }));
-			input.BindControllerCommand(0, Controller::Button::DPadLeft, KeyState::Pressed,
-				std::make_unique<GridMoveCommand>(p1, glm::ivec2{ -1, 0 }));
-			input.BindControllerCommand(0, Controller::Button::DPadRight, KeyState::Pressed,
-				std::make_unique<GridMoveCommand>(p1, glm::ivec2{ 1, 0 }));
-
-			// Pump on controller
-			input.BindControllerCommand(0, Controller::Button::A, KeyState::Pressed,
-				std::make_unique<PumpCommand>(p1));
+			// In single player, P1 also gets Controller 0.
+			// In co-op/versus, Controller 0 is reserved for P2.
+			if (m_gameMode == GameMode::SinglePlayer)
+			{
+				input.BindControllerCommand(0, Controller::Button::DPadUp, KeyState::Pressed,
+					std::make_unique<GridMoveCommand>(p1, glm::ivec2{ 0, -1 }));
+				input.BindControllerCommand(0, Controller::Button::DPadDown, KeyState::Pressed,
+					std::make_unique<GridMoveCommand>(p1, glm::ivec2{ 0, 1 }));
+				input.BindControllerCommand(0, Controller::Button::DPadLeft, KeyState::Pressed,
+					std::make_unique<GridMoveCommand>(p1, glm::ivec2{ -1, 0 }));
+				input.BindControllerCommand(0, Controller::Button::DPadRight, KeyState::Pressed,
+					std::make_unique<GridMoveCommand>(p1, glm::ivec2{ 1, 0 }));
+				input.BindControllerCommand(0, Controller::Button::A, KeyState::Pressed,
+					std::make_unique<PumpCommand>(p1));
+			}
 		}
 
-		// Player 2: Arrow keys (keyboard) + Controller 1 (co-op as second Dig Dug)
+		// Player 2 (co-op): Controller 0 + Arrow keys + Right Shift
 		if (m_buildResult.pPlayer2)
 		{
 			auto* p2 = m_buildResult.pPlayer2;
@@ -272,34 +355,38 @@ namespace dae
 			input.BindKeyboardCommand(SDL_SCANCODE_RSHIFT, KeyState::Pressed,
 				std::make_unique<PumpCommand>(p2));
 
-			// Controller 1
-			input.BindControllerCommand(1, Controller::Button::DPadUp, KeyState::Pressed,
+			// Controller 0 (the first/only controller goes to P2 in co-op)
+			input.BindControllerCommand(0, Controller::Button::DPadUp, KeyState::Pressed,
 				std::make_unique<GridMoveCommand>(p2, glm::ivec2{ 0, -1 }));
-			input.BindControllerCommand(1, Controller::Button::DPadDown, KeyState::Pressed,
+			input.BindControllerCommand(0, Controller::Button::DPadDown, KeyState::Pressed,
 				std::make_unique<GridMoveCommand>(p2, glm::ivec2{ 0, 1 }));
-			input.BindControllerCommand(1, Controller::Button::DPadLeft, KeyState::Pressed,
+			input.BindControllerCommand(0, Controller::Button::DPadLeft, KeyState::Pressed,
 				std::make_unique<GridMoveCommand>(p2, glm::ivec2{ -1, 0 }));
-			input.BindControllerCommand(1, Controller::Button::DPadRight, KeyState::Pressed,
+			input.BindControllerCommand(0, Controller::Button::DPadRight, KeyState::Pressed,
 				std::make_unique<GridMoveCommand>(p2, glm::ivec2{ 1, 0 }));
-			input.BindControllerCommand(1, Controller::Button::A, KeyState::Pressed,
+			input.BindControllerCommand(0, Controller::Button::A, KeyState::Pressed,
 				std::make_unique<PumpCommand>(p2));
 		}
 
-		// Versus: Player 2 controls the Fygar with Controller 1
+		// Versus: Player 2 controls the Fygar with Controller 0 only
 		if (m_buildResult.pVersusEnemy)
 		{
 			auto* fygar = m_buildResult.pVersusEnemy;
 
-			input.BindControllerCommand(1, Controller::Button::DPadUp, KeyState::Pressed,
+			// Controller 0
+			input.BindControllerCommand(0, Controller::Button::DPadUp, KeyState::Pressed,
 				std::make_unique<GridMoveCommand>(fygar, glm::ivec2{ 0, -1 }));
-			input.BindControllerCommand(1, Controller::Button::DPadDown, KeyState::Pressed,
+			input.BindControllerCommand(0, Controller::Button::DPadDown, KeyState::Pressed,
 				std::make_unique<GridMoveCommand>(fygar, glm::ivec2{ 0, 1 }));
-			input.BindControllerCommand(1, Controller::Button::DPadLeft, KeyState::Pressed,
+			input.BindControllerCommand(0, Controller::Button::DPadLeft, KeyState::Pressed,
 				std::make_unique<GridMoveCommand>(fygar, glm::ivec2{ -1, 0 }));
-			input.BindControllerCommand(1, Controller::Button::DPadRight, KeyState::Pressed,
+			input.BindControllerCommand(0, Controller::Button::DPadRight, KeyState::Pressed,
 				std::make_unique<GridMoveCommand>(fygar, glm::ivec2{ 1, 0 }));
-
-			// TODO: A button = fire breath for versus Fygar
+			input.BindControllerCommand(0, Controller::Button::A, KeyState::Down,
+				std::make_unique<FireBreathCommand>(fygar));
+			// B = enter ghost form (phase through dirt, on a cooldown)
+			input.BindControllerCommand(0, Controller::Button::B, KeyState::Down,
+				std::make_unique<GhostCommand>(fygar));
 		}
 	}
 
@@ -307,8 +394,29 @@ namespace dae
 	{
 		if (!m_pScene) return;
 
-		// Build a filtered level data that only includes enemies that were
-		// alive when the player died — dead enemies stay dead
+		// Versus: any death sends BOTH characters back to spawn (dug tunnels are
+		// preserved). Defer the work to the next Update so we don't rebuild the
+		// Fygar from inside the dying player's component Update.
+		if (m_gameMode == GameMode::Versus)
+		{
+			m_pendingVersusReset = true;
+			std::cout << "[PlayingState] Versus — Dig Dug died, scheduling round reset\n";
+			return;
+		}
+
+		// Single-player: respawn surviving enemies, terrain preserved.
+		RespawnSurvivingEnemies();
+		BindInput();
+		WirePlayerCallbacks();
+
+		std::cout << "[PlayingState] Soft reset — enemies respawned, terrain preserved\n";
+	}
+
+	// Re-creates only the enemies that were still alive, at their original spawn
+	// positions, and rewires rocks. Terrain (dug tunnels) is preserved. Shared by
+	// the single-player soft-reset and the co-op round reset.
+	void PlayingState::RespawnSurvivingEnemies()
+	{
 		LevelData resetData = m_currentLevelData;
 		resetData.enemies.clear();
 
@@ -355,22 +463,16 @@ namespace dae
 
 		m_buildResult.enemies = newEnemies;
 
-		// Sync level data so the next SoftReset has a correct 1:1 index
+		// Sync level data so the next reset keeps a correct 1:1 index
 		// correspondence between m_buildResult.enemies and m_currentLevelData.enemies
 		m_currentLevelData.enemies = resetData.enemies;
-
-		// Rebind input since enemies changed
-		BindInput();
-
-		// Re-set callbacks (they persist, but just to be safe after rebind)
-		WirePlayerCallbacks();
-
-		std::cout << "[PlayingState] Soft reset — enemies respawned, terrain preserved\n";
 	}
 
 	void PlayingState::WirePlayerCallbacks()
 	{
-		auto wireOne = [this](GameObject* pPlayer)
+		const bool coop = (m_gameMode == GameMode::CoOp);
+
+		auto wireOne = [this, coop](GameObject* pPlayer)
 		{
 			if (!pPlayer) return;
 			auto* collision = pPlayer->GetComponent<PlayerCollisionComponent>();
@@ -378,6 +480,11 @@ namespace dae
 
 			collision->SetSoftResetCallback([this]() { SoftReset(); });
 			collision->SetGameOverCallback([this]() { HandleGameOver(); });
+
+			// In co-op, lives are shared and PlayingState coordinates death/respawn.
+			collision->SetCoopShared(coop);
+			if (coop)
+				collision->SetOnDeathStartCallback([this]() { OnCoopPlayerHit(); });
 		};
 
 		wireOne(m_buildResult.pPlayer1);
@@ -386,6 +493,13 @@ namespace dae
 
 	void PlayingState::HandleGameOver()
 	{
+		// Versus: Dig Dug ran out of lives — the Fygar wins.
+		if (m_gameMode == GameMode::Versus)
+		{
+			EndVersus(VersusWinner::Fygar);
+			return;
+		}
+
 		// In co-op, only transition to game over when ALL players are out of lives.
 		// The player who just ran out calls this, but the other might still be alive.
 		if (m_gameMode == GameMode::CoOp)
@@ -416,6 +530,234 @@ namespace dae
 		session.SetCurrentRound(m_currentRound);
 	}
 
+	// ---------------------------------------------------------------------
+	//  Versus mode
+	// ---------------------------------------------------------------------
+
+	void PlayingState::UpdateVersus()
+	{
+		if (m_versusEnded || m_pendingVersusReset) return;
+
+		// Wait out Dig Dug's death sequence before resolving anything.
+		if (m_buildResult.pPlayer1)
+		{
+			auto* pc = m_buildResult.pPlayer1->GetComponent<PlayerCollisionComponent>();
+			if (pc && pc->IsDead())
+				return;
+		}
+
+		// Has the Fygar been killed (popped or crushed)?
+		bool fygarDead = false;
+		if (!m_buildResult.pVersusEnemy || m_buildResult.pVersusEnemy->IsMarkedForDestroy())
+		{
+			fygarDead = true;
+		}
+		else
+		{
+			auto* ec = m_buildResult.pVersusEnemy->GetComponent<EnemyComponent>();
+			if (!ec || !ec->IsAlive())
+				fygarDead = true;
+		}
+
+		if (fygarDead)
+		{
+			--m_fygarLives;
+			UpdateFygarLivesHUD();
+
+			if (m_fygarLives <= 0)
+				EndVersus(VersusWinner::Player); // Dig Dug wins
+			else
+				m_pendingVersusReset = true;     // restart the round next Update
+		}
+	}
+
+	void PlayingState::ResetVersusRound()
+	{
+		m_pendingVersusReset = false;
+		if (!m_pScene) return;
+
+		// Send Dig Dug back to its spawn. The player object persists, so its
+		// remaining lives (already decremented on death) are untouched.
+		if (m_buildResult.pPlayer1)
+		{
+			if (auto* c = m_buildResult.pPlayer1->GetComponent<PlayerCollisionComponent>())
+				c->Respawn(m_currentLevelData.playerSpawn.x, m_currentLevelData.playerSpawn.y);
+		}
+
+		// Re-create the Fygar at its spawn in idle state. This covers both the
+		// "Fygar was killed" and "Fygar still alive" cases uniformly. We do NOT
+		// rebuild the grid, so every tunnel the player dug stays dug.
+		if (m_buildResult.pVersusEnemy && !m_buildResult.pVersusEnemy->IsMarkedForDestroy())
+			m_buildResult.pVersusEnemy->MarkForDestroy();
+
+		auto newEnemies = LevelLoader::RespawnEnemies(
+			*m_pScene, m_buildResult.pGrid, m_currentLevelData, m_gameMode,
+			m_buildResult.pPlayer1, m_buildResult.pPlayer2,
+			m_buildResult.pScore1, m_buildResult.pScore2);
+
+		m_buildResult.enemies = newEnemies;
+		m_buildResult.pVersusEnemy = newEnemies.empty() ? nullptr : newEnemies.front();
+
+		// Rewire surviving rocks to the new Fygar.
+		for (auto* rock : m_buildResult.rocks)
+		{
+			if (!rock || rock->IsMarkedForDestroy()) continue;
+			auto* rockComp = rock->GetComponent<RockComponent>();
+			if (!rockComp) continue;
+
+			rockComp->ClearEnemies();
+			for (auto* enemy : newEnemies)
+				rockComp->AddEnemy(enemy);
+		}
+
+		UpdateFygarLivesHUD();   // count unchanged — keep the readout in sync
+		BindInput();             // bind the controller to the new Fygar object
+
+		// Versus never advances levels, so the music is only ever started in
+		// OnEnter. Re-assert it on each round reset so it can't be left stopped.
+		ServiceLocator::GetSoundService().PlayMusic(Sounds::GameMusic);
+
+		std::cout << "[PlayingState] Versus round reset — positions reset, tunnels preserved\n";
+	}
+
+	void PlayingState::SetupVersusHUD()
+	{
+		if (!m_pScene) return;
+
+		auto font = ResourceManager::GetInstance().LoadFont("Lingua.otf", 18);
+
+		auto go = std::make_unique<GameObject>();
+		go->AddComponent<TransformComponent>()->SetLocalPosition(480.f, 25.f);
+		m_pFygarLivesText = go->AddComponent<TextComponent>(
+			font, "Fygar Lives: " + std::to_string(m_fygarLives));
+		m_pScene->Add(std::move(go));
+	}
+
+	void PlayingState::UpdateFygarLivesHUD()
+	{
+		if (m_pFygarLivesText)
+		{
+			int shown = (m_fygarLives < 0) ? 0 : m_fygarLives;
+			m_pFygarLivesText->SetText("Fygar Lives: " + std::to_string(shown));
+		}
+	}
+
+	void PlayingState::EndVersus(VersusWinner winner)
+	{
+		if (m_versusEnded) return;
+		m_versusEnded = true;
+
+		GameSession::GetInstance().SetVersusWinner(winner);
+		SaveScoresToSession();
+		Renderer::GetInstance().ClearPostRenderCallback();
+		GameStateManager::GetInstance().SetState<GameOverState>();
+	}
+
+	// ---------------------------------------------------------------------
+	//  Co-op (shared lives)
+	// ---------------------------------------------------------------------
+
+	void PlayingState::OnCoopPlayerHit()
+	{
+		// Called the instant a player is hit (from PlayerCollisionComponent).
+		// Each death consumes one life from the shared pool.
+		--m_coopLives;
+		UpdateCoopLivesHUD();
+	}
+
+	bool PlayingState::CoopHandleDeaths()
+	{
+		if (m_coopEnded) return true;
+
+		auto getCollision = [](GameObject* p) -> PlayerCollisionComponent*
+		{
+			return p ? p->GetComponent<PlayerCollisionComponent>() : nullptr;
+		};
+		auto* c1 = getCollision(m_buildResult.pPlayer1);
+		auto* c2 = getCollision(m_buildResult.pPlayer2);
+
+		const bool p1Dead = (c1 && c1->IsDead());
+		const bool p2Dead = (c2 && c2->IsDead());
+
+		// No death in progress — let the normal win check run.
+		if (!p1Dead && !p2Dead)
+			return false;
+
+		// Wait until every dying player has finished its death animation. This
+		// lets the surviving player keep moving / killing / dying meanwhile, and
+		// guarantees we only resolve once (covers the both-die-together case).
+		const bool stillAnimating =
+			(p1Dead && !c1->IsAwaitingRespawn()) ||
+			(p2Dead && !c2->IsAwaitingRespawn());
+		if (stillAnimating)
+			return true;
+
+		// All dying players have finished — resolve the shared-lives outcome.
+		if (m_coopLives <= 0)
+		{
+			m_coopEnded = true;
+			SaveScoresToSession();
+			Renderer::GetInstance().ClearPostRenderCallback();
+			GameStateManager::GetInstance().SetState<GameOverState>();
+			return true;
+		}
+
+		CoopResetRound(c1, c2);
+		return true;
+	}
+
+	void PlayingState::CoopResetRound(PlayerCollisionComponent* c1, PlayerCollisionComponent* c2)
+	{
+		// Respawn the surviving enemies to their spawns (terrain preserved).
+		RespawnSurvivingEnemies();
+
+		// Reposition BOTH players to their spawns — including a player who never
+		// died — and clear the dead player's death state.
+		if (m_buildResult.pPlayer1 && c1)
+			c1->Respawn(m_currentLevelData.playerSpawn.x, m_currentLevelData.playerSpawn.y);
+		if (m_buildResult.pPlayer2 && c2)
+			c2->Respawn(m_currentLevelData.player2Spawn.x, m_currentLevelData.player2Spawn.y);
+
+		// Edge case: if every enemy was cleared during the death sequence, the
+		// round is actually complete — advance instead of sitting in an empty level.
+		bool anyEnemyAlive = false;
+		for (auto* enemy : m_buildResult.enemies)
+		{
+			if (enemy && !enemy->IsMarkedForDestroy())
+			{
+				auto* comp = enemy->GetComponent<EnemyComponent>();
+				if (comp && comp->IsAlive()) { anyEnemyAlive = true; break; }
+			}
+		}
+		if (!anyEnemyAlive)
+			AdvanceLevel();
+
+		std::cout << "[PlayingState] Co-op round reset — both players to spawn, "
+			<< m_coopLives << " shared lives left\n";
+	}
+
+	void PlayingState::SetupCoopHUD()
+	{
+		if (!m_pScene) return;
+
+		auto font = ResourceManager::GetInstance().LoadFont("Lingua.otf", 18);
+
+		auto go = std::make_unique<GameObject>();
+		go->AddComponent<TransformComponent>()->SetLocalPosition(10.f, 25.f);
+		m_pCoopLivesText = go->AddComponent<TextComponent>(
+			font, "Lives: " + std::to_string(m_coopLives));
+		m_pScene->Add(std::move(go));
+	}
+
+	void PlayingState::UpdateCoopLivesHUD()
+	{
+		if (m_pCoopLivesText)
+		{
+			int shown = (m_coopLives < 0) ? 0 : m_coopLives;
+			m_pCoopLivesText->SetText("Lives: " + std::to_string(shown));
+		}
+	}
+
 	void PlayingState::AdvanceLevel()
 	{
 		SaveScoresToSession();
@@ -432,6 +774,10 @@ namespace dae
 		LoadLevel(m_currentRound);
 		BindInput();
 
+		// Re-assert the gameplay music for the new level so it can't be left
+		// in a stopped state after the transition.
+		ServiceLocator::GetSoundService().PlayMusic(Sounds::GameMusic);
+
 		std::cout << "[PlayingState] Level complete! Advancing to round " << m_currentRound << "\n";
 	}
 
@@ -445,6 +791,8 @@ namespace dae
 		}
 		LoadLevel(m_currentRound);
 		BindInput();
+
+		ServiceLocator::GetSoundService().PlayMusic(Sounds::GameMusic);
 	}
 
 	std::string PlayingState::GetLevelFilePath(int round) const

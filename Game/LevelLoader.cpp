@@ -102,7 +102,8 @@ namespace dae
 		return data;
 	}
 
-	LevelBuildResult LevelLoader::BuildScene(Scene& scene, const LevelData& data, GameMode mode)
+	LevelBuildResult LevelLoader::BuildScene(Scene& scene, const LevelData& data, GameMode mode,
+		int versusPlayerLives)
 	{
 		scene.RemoveAll();
 
@@ -113,6 +114,15 @@ namespace dae
 
 		if (mode == GameMode::CoOp)
 			result.pPlayer2 = CreatePlayer(scene, result.pGrid, data, 1);
+
+		// Versus: Dig Dug starts with the supplied life count (3 for a fresh
+		// match, or the carried-over count on a round restart) — set this before
+		// CreateHUD so the lives readout shows the correct value.
+		if (mode == GameMode::Versus && result.pPlayer1)
+		{
+			if (auto* c = result.pPlayer1->GetComponent<PlayerCollisionComponent>())
+				c->SetLives(versusPlayerLives);
+		}
 
 		result.enemies = CreateEnemies(scene, result.pGrid, data, mode,
 			result.pVersusEnemy, result.pPlayer1);
@@ -167,6 +177,18 @@ namespace dae
 
 		wirePlayer(result.pPlayer1, data.playerSpawn, result.pScore1);
 		wirePlayer(result.pPlayer2, data.player2Spawn, result.pScore2);
+
+		// In co-op, add Player 2 as an additional target so enemies chase
+		// the closest player instead of always targeting Player 1
+		if (result.pPlayer2)
+		{
+			for (auto* enemy : result.enemies)
+			{
+				auto* enemyComp = enemy->GetComponent<EnemyComponent>();
+				if (enemyComp)
+					enemyComp->AddTarget(result.pPlayer2);
+			}
+		}
 
 		return result;
 	}
@@ -436,7 +458,14 @@ namespace dae
 				spawn.type == EnemySpawn::Type::Fygar &&
 				outVersusEnemy == nullptr);
 
-			if (!isVersusPlayer)
+			if (isVersusPlayer)
+			{
+				// Versus Fygar: has EnemyComponent for fire/inflate/scoring,
+				// but is player-controlled (no AI chase logic)
+				auto* enemyComp = enemy->AddComponent<EnemyComponent>(pGrid, eType, pPlayerTarget);
+				enemyComp->SetPlayerControlled(true);
+			}
+			else
 			{
 				enemy->AddComponent<EnemyComponent>(pGrid, eType, pPlayerTarget);
 			}
@@ -506,18 +535,30 @@ namespace dae
 			pScore1->AddObserver(scoreDisplay);
 		scene.Add(std::move(scoreGo));
 
-		// Player 1 lives display — observes PlayerCollisionComponent
-		auto livesGo = std::make_unique<GameObject>();
-		livesGo->AddComponent<TransformComponent>()->SetLocalPosition(10.f, 25.f);
-		livesGo->AddComponent<TextComponent>(font, "Lives: 4");
-		auto* livesDisplay = livesGo->AddComponent<LivesDisplayComponent>();
-		if (pPlayer1)
+		// Player 1 lives display — observes PlayerCollisionComponent.
+		// In co-op, lives are a shared pool shown by a single counter that
+		// PlayingState manages, so skip the per-player display here.
+		if (mode != GameMode::CoOp)
 		{
-			auto* collision = pPlayer1->GetComponent<PlayerCollisionComponent>();
-			if (collision)
-				collision->AddObserver(livesDisplay);
+			int p1Lives = 4;
+			if (pPlayer1)
+			{
+				if (auto* c = pPlayer1->GetComponent<PlayerCollisionComponent>())
+					p1Lives = c->GetLives();
+			}
+
+			auto livesGo = std::make_unique<GameObject>();
+			livesGo->AddComponent<TransformComponent>()->SetLocalPosition(10.f, 25.f);
+			livesGo->AddComponent<TextComponent>(font, "Lives: " + std::to_string(p1Lives));
+			auto* livesDisplay = livesGo->AddComponent<LivesDisplayComponent>();
+			if (pPlayer1)
+			{
+				auto* collision = pPlayer1->GetComponent<PlayerCollisionComponent>();
+				if (collision)
+					collision->AddObserver(livesDisplay);
+			}
+			scene.Add(std::move(livesGo));
 		}
-		scene.Add(std::move(livesGo));
 
 		auto roundGo = std::make_unique<GameObject>();
 		roundGo->AddComponent<TransformComponent>()->SetLocalPosition(400.f, 5.f);
@@ -535,24 +576,13 @@ namespace dae
 				pScore2->AddObserver(score2Display);
 			scene.Add(std::move(score2Go));
 
-			// Player 2 lives display
-			auto lives2Go = std::make_unique<GameObject>();
-			lives2Go->AddComponent<TransformComponent>()->SetLocalPosition(500.f, 25.f);
-			lives2Go->AddComponent<TextComponent>(font, "P2 Lives: 4");
-			auto* lives2Display = lives2Go->AddComponent<LivesDisplayComponent>("P2 Lives: ");
-			if (pPlayer2)
-			{
-				auto* collision2 = pPlayer2->GetComponent<PlayerCollisionComponent>();
-				if (collision2)
-					collision2->AddObserver(lives2Display);
-			}
-			scene.Add(std::move(lives2Go));
+			// Lives are shared in co-op — PlayingState draws the single counter.
 		}
 
 		if (mode == GameMode::Versus)
 		{
 			auto versusGo = std::make_unique<GameObject>();
-			versusGo->AddComponent<TransformComponent>()->SetLocalPosition(300.f, 550.f);
+			versusGo->AddComponent<TransformComponent>()->SetLocalPosition(250.f, 450.f);
 			versusGo->AddComponent<TextComponent>(font, "VERSUS MODE");
 			scene.Add(std::move(versusGo));
 		}
@@ -605,6 +635,17 @@ namespace dae
 
 		wireScore(pScore1);
 		wireScore(pScore2);
+
+		// Add Player 2 as a target so respawned enemies chase the closest player
+		if (pPlayer2)
+		{
+			for (auto* enemy : enemies)
+			{
+				auto* enemyComp = enemy->GetComponent<EnemyComponent>();
+				if (enemyComp)
+					enemyComp->AddTarget(pPlayer2);
+			}
+		}
 
 		// Wire rock observers to new enemies
 		// (rocks don't need rewiring — they check enemies by proximity each frame)

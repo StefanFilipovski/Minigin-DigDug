@@ -10,6 +10,8 @@
 #include "TransformComponent.h"
 #include "RenderComponent.h"
 #include "TextComponent.h"
+#include "ServiceLocator.h"
+#include "GameSounds.h"
 #include "Command.h"
 #include <SDL3/SDL.h>
 
@@ -92,11 +94,17 @@ namespace dae
 		m_selectedMode = GameMode::SinglePlayer;
 		UpdateSelectionVisual();
 		BindInput();
+
+		// Clear any lingering jingles (Game Over / Name Entry) so they don't
+		// play on top of the menu music.
+		ServiceLocator::GetSoundService().StopAllSounds();
+		ServiceLocator::GetSoundService().PlayMusic(Sounds::MenuMusic);
 	}
 
 	void MenuState::OnExit()
 	{
 		// Input clearing is handled by GameStateManager::SetState
+		ServiceLocator::GetSoundService().StopMusic();
 	}
 
 	void MenuState::Update(float deltaTime)
@@ -164,6 +172,9 @@ namespace dae
 		// We access it via a static/global or via GameStateManager.
 		// Since GameStateManager stores states by type, we add a GetState<T>() helper.
 		// For now, we use a simpler approach with a shared GameMode variable.
+
+		// Coin-insert / start blip
+		ServiceLocator::GetSoundService().PlaySound(Sounds::Credit);
 
 		// Using the GameSession approach:
 		GameSession::GetInstance().SetGameMode(m_selectedMode);

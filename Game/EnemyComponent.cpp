@@ -8,9 +8,11 @@
 #include "ResourceManager.h"
 #include "Renderer.h"
 #include "Texture2D.h"
+#include "PlayerCollisionComponent.h"
 #include "GameEventIds.h"
 #include "GameObject.h"
 #include <string>
+#include <climits>
 
 namespace dae
 {
@@ -21,6 +23,9 @@ namespace dae
 		, m_type(type)
 		, m_pTarget(pTarget)
 	{
+		if (pTarget)
+			m_targets.push_back(pTarget);
+
 		m_pCurrentState = std::make_unique<EnemyNormalState>();
 
 		if (m_type == EnemyType::Fygar)
@@ -28,6 +33,58 @@ namespace dae
 			SDL_Color redKey{ 108, 7, 0, 255 };
 			m_fireTexture = ResourceManager::GetInstance().LoadTexture("Enemy2Fire.png", redKey);
 		}
+	}
+
+	void EnemyComponent::AddTarget(GameObject* pTarget)
+	{
+		if (pTarget)
+			m_targets.push_back(pTarget);
+	}
+
+	void EnemyComponent::ClearTargets()
+	{
+		m_targets.clear();
+		m_pTarget = nullptr;
+	}
+
+	GameObject* EnemyComponent::GetTarget() const
+	{
+		CacheComponents();
+
+		// If only one target, use it directly
+		if (m_targets.size() <= 1)
+			return m_pTarget;
+
+		// Find the closest living player
+		GameObject* closest = nullptr;
+		int bestDistSq = INT_MAX;
+
+		const auto& myPos = GetGridPosition();
+
+		for (auto* target : m_targets)
+		{
+			if (!target || target->IsMarkedForDestroy()) continue;
+
+			// Skip dead players — they're in the death animation
+			auto* collision = target->GetComponent<PlayerCollisionComponent>();
+			if (collision && collision->IsDead()) continue;
+
+			auto* movement = target->GetComponent<GridMovementComponent>();
+			if (!movement) continue;
+
+			const auto& targetPos = movement->GetGridPosition();
+			glm::ivec2 diff = targetPos - myPos;
+			int distSq = diff.x * diff.x + diff.y * diff.y;
+
+			if (distSq < bestDistSq)
+			{
+				bestDistSq = distSq;
+				closest = target;
+			}
+		}
+
+		// Fall back to primary target if no living player found
+		return closest ? closest : m_pTarget;
 	}
 
 	void EnemyComponent::CacheComponents() const
@@ -42,6 +99,10 @@ namespace dae
 	{
 		CacheComponents();
 		if (!m_pMovement) return;
+
+		// Tick the ghost-form cooldown (player-controlled Versus Fygar)
+		if (m_ghostCooldownRemaining > 0.f)
+			m_ghostCooldownRemaining -= deltaTime;
 
 		// Call Enter on the initial state once components are ready
 		if (!m_stateInitialized && m_pCurrentState)
@@ -177,6 +238,37 @@ namespace dae
 	}
 
 	// External triggers — these still call ChangeState directly
+
+	void EnemyComponent::SetPlayerControlled(bool controlled)
+	{
+		m_playerControlled = controlled;
+		if (controlled)
+		{
+			// Switch to idle state — no AI, just animations
+			ChangeState(std::make_unique<EnemyIdleState>());
+			m_stateInitialized = true;
+		}
+	}
+
+	void EnemyComponent::StartFireBreath()
+	{
+		if (m_type != EnemyType::Fygar) return;
+		if (!IsAlive() || IsInflating() || IsFireBreathing()) return;
+		// Can't breathe fire while phasing through the ground
+		if (IsGhost()) return;
+
+		ChangeState(std::make_unique<EnemyFireBreathingState>());
+	}
+
+	void EnemyComponent::StartGhost()
+	{
+		if (!m_playerControlled) return;
+		// Only from the idle (normal player-controlled) state, and not on cooldown
+		if (GetStateType() != EnemyStateType::Idle) return;
+		if (m_ghostCooldownRemaining > 0.f) return;
+
+		ChangeState(std::make_unique<EnemyPlayerGhostState>());
+	}
 
 	void EnemyComponent::StartInflating(const glm::ivec2& attackDir)
 	{

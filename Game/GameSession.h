@@ -7,6 +7,9 @@
 
 namespace dae
 {
+	// Who won a Versus match
+	enum class VersusWinner { None, Player, Fygar };
+
 	// Holds persistent game session data that multiple states need access to.
 	// This avoids states needing to know about each other's internals.
 	class GameSession final : public Singleton<GameSession>
@@ -15,6 +18,10 @@ namespace dae
 		// Game mode
 		void SetGameMode(GameMode mode) { m_gameMode = mode; }
 		GameMode GetGameMode() const { return m_gameMode; }
+
+		// Versus winner (only meaningful in Versus mode)
+		void SetVersusWinner(VersusWinner winner) { m_versusWinner = winner; }
+		VersusWinner GetVersusWinner() const { return m_versusWinner; }
 
 		// Scores
 		int GetPlayer1Score() const { return m_player1Score; }
@@ -54,6 +61,7 @@ namespace dae
 			m_player1Lives = 4;  // 1 starting life + 3 extra
 			m_player2Lives = 4;
 			m_currentRound = 1;
+			m_versusWinner = VersusWinner::None;
 		}
 
 	private:
@@ -61,6 +69,7 @@ namespace dae
 		GameSession() = default;
 
 		GameMode m_gameMode{ GameMode::SinglePlayer };
+		VersusWinner m_versusWinner{ VersusWinner::None };
 
 		int m_player1Score{ 0 };
 		int m_player2Score{ 0 };

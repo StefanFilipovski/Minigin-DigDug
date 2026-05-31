@@ -3,6 +3,7 @@
 #include "SpriteAnimatorComponent.h"
 #include "PumpComponent.h"
 #include "ServiceLocator.h"
+#include "GameSounds.h"
 #include <algorithm>
 #include "GridComponent.h"
 #include "EnemyComponent.h"
@@ -49,12 +50,22 @@ namespace dae
 					m_phaseTimer += deltaTime;
 					if (m_phaseTimer >= LastFrameHold)
 					{
-						// Hide the player sprite during black screen
+						// Hide the player sprite
 						auto* render = GetOwner()->GetComponent<RenderComponent>();
 						if (render) render->SetSourceRect(0, 0, 0, 0);
 
-						m_deathPhase = DeathPhase::BlackScreen;
-						m_phaseTimer = BlackScreenDuration;
+						if (m_coopShared)
+						{
+							// Co-op: park here; PlayingState repositions both
+							// players (no full-screen black-out so the other
+							// player keeps playing).
+							m_deathPhase = DeathPhase::AwaitingRespawn;
+						}
+						else
+						{
+							m_deathPhase = DeathPhase::BlackScreen;
+							m_phaseTimer = BlackScreenDuration;
+						}
 					}
 				}
 				break;
@@ -73,6 +84,9 @@ namespace dae
 				SoftReset();
 				break;
 			}
+			case DeathPhase::AwaitingRespawn:
+				// Co-op: wait for PlayingState to call Respawn()
+				break;
 			default:
 				break;
 			}
@@ -133,10 +147,23 @@ namespace dae
 	{
 		if (m_dead) return;
 
-		--m_lives;
 		m_dead = true;
 
-		ServiceLocator::GetSoundService().PlaySound("Data/death.wav");
+		if (m_coopShared)
+		{
+			// Lives are a shared pool owned by PlayingState — notify it so it
+			// can decrement the count and update the HUD.
+			if (m_onDeathStartCallback)
+				m_onDeathStartCallback();
+		}
+		else
+		{
+			--m_lives;
+		}
+
+		// No dedicated player-death file in the Data/Sounds set, so reuse the
+		// "Monster - Blow" effect for death feedback.
+		ServiceLocator::GetSoundService().PlaySound(Sounds::MonsterBlow);
 
 		auto* pump = GetOwner()->GetComponent<PumpComponent>();
 		if (pump) pump->ForceReset();
@@ -197,14 +224,16 @@ namespace dae
 				transform->SetLocalPosition(pos.x, pos.y);
 		}
 
-		// Show the player again — animator will set the correct source rect
+		// Show the player again — Restart re-applies a valid source rect even if
+		// "walk_right" was already the current animation (Play would no-op and
+		// leave the cleared rect, rendering the whole sprite sheet).
 		auto* render = GetOwner()->GetComponent<RenderComponent>();
 		if (render) render->ClearSourceRect();
 
 		// Reset to idle animation
 		if (m_pAnimator)
 		{
-			m_pAnimator->Play("walk_right");
+			m_pAnimator->Restart("walk_right");
 			m_pAnimator->Pause();
 		}
 	}

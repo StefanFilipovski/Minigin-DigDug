@@ -10,7 +10,8 @@
 #include <SDL3/SDL_pixels.h>
 #include "GameEventIds.h"
 #include "GameObject.h"
-// #include "ServiceLocator.h" // uncomment when rock_break.wav is added
+#include "ServiceLocator.h"
+#include "GameSounds.h"
 #include <cmath>
 
 namespace dae
@@ -150,6 +151,8 @@ namespace dae
 			m_startFallRow = m_gridPos.y;
 			m_playerGraceTimer = PlayerGraceDuration; // player immunity window
 
+			ServiceLocator::GetSoundService().PlaySound(Sounds::RockDropping);
+
 			// Store starting pixel Y for smooth falling
 			glm::vec2 cellPixel = m_pGrid->GridToPixel(m_gridPos.x, m_gridPos.y);
 			m_pixelY = cellPixel.y;
@@ -220,6 +223,8 @@ namespace dae
 			m_breakTimer = 0.f;
 			m_breakFrame = 0;
 
+			ServiceLocator::GetSoundService().PlaySound(Sounds::RockHit);
+
 			// Notify observers that this rock finished crushing enemies
 			// ScoreComponent reads GetCrushCount() to award the correct bonus
 			if (m_crushCount > 0)
@@ -227,8 +232,6 @@ namespace dae
 				NotifyObservers(EVENT_ROCK_CRUSH_COMPLETE, GetOwner());
 			}
 
-			// TODO: add rock_break.wav sound file
-			// ServiceLocator::GetSoundService().PlaySound("Data/rock_break.wav");
 		}
 	}
 
@@ -246,6 +249,7 @@ namespace dae
 		if (m_breakTimer >= m_breakDuration)
 		{
 			m_state = RockState::Destroyed;
+			ServiceLocator::GetSoundService().PlaySound(Sounds::RockBroken);
 			GetOwner()->MarkForDestroy();
 		}
 	}

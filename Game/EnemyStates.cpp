@@ -5,6 +5,7 @@
 #include "SpriteAnimatorComponent.h"
 #include "RenderComponent.h"
 #include "ServiceLocator.h"
+#include "GameSounds.h"
 #include "GameEventIds.h"
 #include "GameObject.h"
 #include <cstdlib>
@@ -14,6 +15,103 @@
 
 namespace dae
 {
+	// ---- IdleState (player-controlled) ----
+
+	void EnemyIdleState::Enter(EnemyComponent& enemy)
+	{
+		auto* animator = enemy.GetAnimator();
+		if (animator)
+		{
+			animator->Play(enemy.GetLastHorizontalAnim());
+			animator->Resume();
+		}
+	}
+
+	std::unique_ptr<EnemyState> EnemyIdleState::Update(EnemyComponent& enemy, float /*deltaTime*/)
+	{
+		// No AI — just update walk animation based on current movement direction
+		auto* movement = enemy.GetMovement();
+		auto* animator = enemy.GetAnimator();
+		if (!movement || !animator) return nullptr;
+
+		if (movement->IsMoving())
+		{
+			glm::ivec2 dir = movement->GetCurrentDirection();
+			if (dir.x > 0)      { enemy.SetLastHorizontalAnim("walk_right"); animator->Play("walk_right"); }
+			else if (dir.x < 0) { enemy.SetLastHorizontalAnim("walk_left");  animator->Play("walk_left"); }
+			else if (dir.y < 0) animator->Play("walk_up");
+			else if (dir.y > 0) animator->Play("walk_down");
+			animator->Resume();
+		}
+		else
+		{
+			animator->Pause();
+		}
+
+		return nullptr;
+	}
+
+	void EnemyIdleState::Exit(EnemyComponent& /*enemy*/)
+	{
+	}
+
+	// ---- PlayerGhostState (player-controlled Fygar) ----
+
+	void EnemyPlayerGhostState::Enter(EnemyComponent& enemy)
+	{
+		m_hasBeenInDirt = false;
+		m_timer = 0.f;
+
+		auto* movement = enemy.GetMovement();
+		if (movement) movement->SetGhostMode(true);
+
+		auto* animator = enemy.GetAnimator();
+		if (animator)
+		{
+			animator->Play("ghost");
+			animator->Resume();
+		}
+	}
+
+	std::unique_ptr<EnemyState> EnemyPlayerGhostState::Update(EnemyComponent& enemy, float deltaTime)
+	{
+		m_timer += deltaTime;
+
+		auto* movement = enemy.GetMovement();
+		auto* grid = enemy.GetGrid();
+		if (!movement || !grid) return nullptr;
+
+		// The player drives movement through GridMoveCommand; ghost mode lets the
+		// Fygar pass through dirt. We only evaluate exit conditions when settled
+		// on a cell so we never drop out of ghost form mid-tunnel inside dirt.
+		if (movement->IsMoving()) return nullptr;
+
+		const auto& pos = movement->GetGridPosition();
+		CellType cell = grid->GetCellType(pos.x, pos.y);
+
+		if (cell == CellType::Dirt)
+		{
+			m_hasBeenInDirt = true;
+			return nullptr; // never exit while standing in dirt
+		}
+
+		// On an empty cell (Tunnel/Surface): exit once we've travelled through
+		// dirt, or once the safety duration elapses.
+		if (m_hasBeenInDirt || m_timer >= m_maxDuration)
+			return std::make_unique<EnemyIdleState>();
+
+		return nullptr;
+	}
+
+	void EnemyPlayerGhostState::Exit(EnemyComponent& enemy)
+	{
+		auto* movement = enemy.GetMovement();
+		if (movement) movement->SetGhostMode(false);
+
+		// Start the cooldown before ghost form can be used again
+		enemy.StartGhostCooldown();
+	}
+
 	// ---- NormalState ----
 
 	EnemyNormalState::EnemyNormalState(float ghostCooldown)
@@ -262,7 +360,13 @@ namespace dae
 		m_deflateTimer = 0.f;
 
 		auto* movement = enemy.GetMovement();
-		if (movement) movement->SnapToCurrentCell();
+		if (movement)
+		{
+			movement->SnapToCurrentCell();
+			// Lock movement while inflating — this also ignores a player-
+			// controlled Fygar's input so it can't wriggle off the pump.
+			movement->SetFrozen(true);
+		}
 
 		// Sprites face left by default — flip when attacked from the right
 		auto* render = enemy.GetOwner()->GetComponent<RenderComponent>();
@@ -282,7 +386,12 @@ namespace dae
 			--m_inflateStage;
 
 			if (m_inflateStage <= 0)
-				return std::make_unique<EnemyNormalState>();
+			{
+				if (enemy.IsPlayerControlled())
+					return std::make_unique<EnemyIdleState>();
+				else
+					return std::make_unique<EnemyNormalState>();
+			}
 
 			auto* animator = enemy.GetAnimator();
 			if (animator)
@@ -299,6 +408,10 @@ namespace dae
 	{
 		auto* render = enemy.GetOwner()->GetComponent<RenderComponent>();
 		if (render) render->SetFlipHorizontal(false);
+
+		// Restore movement/input control (deflated back to normal or idle).
+		auto* movement = enemy.GetMovement();
+		if (movement) movement->SetFrozen(false);
 	}
 
 	std::unique_ptr<EnemyState> EnemyInflatingState::PumpOnce(EnemyComponent& enemy)
@@ -323,7 +436,7 @@ namespace dae
 
 	void EnemyPoppedState::Enter(EnemyComponent& enemy)
 	{
-		ServiceLocator::GetSoundService().PlaySound("Data/pop.wav");
+		ServiceLocator::GetSoundService().PlaySound(Sounds::MonsterBlow);
 		enemy.Notify(EVENT_ENEMY_KILLED, enemy.GetOwner());
 		enemy.GetOwner()->MarkForDestroy();
 	}
@@ -341,7 +454,7 @@ namespace dae
 
 	void EnemyCrushedState::Enter(EnemyComponent& enemy)
 	{
-		ServiceLocator::GetSoundService().PlaySound("Data/pop.wav");
+		ServiceLocator::GetSoundService().PlaySound(Sounds::MonsterBlow);
 		enemy.Notify(EVENT_ENEMY_KILLED, enemy.GetOwner());
 		enemy.GetOwner()->MarkForDestroy();
 	}
@@ -379,7 +492,7 @@ namespace dae
 		if (animator) animator->Play(lastAnim);
 	}
 
-	std::unique_ptr<EnemyState> EnemyFireBreathingState::Update(EnemyComponent& /*enemy*/, float deltaTime)
+	std::unique_ptr<EnemyState> EnemyFireBreathingState::Update(EnemyComponent& enemy, float deltaTime)
 	{
 		m_fireTimer += deltaTime;
 		m_ghostCooldown -= deltaTime;
@@ -392,9 +505,14 @@ namespace dae
 			++m_currentRange;
 		}
 
-		// Done breathing fire — return to Normal with remaining ghost cooldown
+		// Done breathing fire
 		if (m_fireTimer >= m_fireDuration)
-			return std::make_unique<EnemyNormalState>(m_ghostCooldown);
+		{
+			if (enemy.IsPlayerControlled())
+				return std::make_unique<EnemyIdleState>();
+			else
+				return std::make_unique<EnemyNormalState>(m_ghostCooldown);
+		}
 
 		return nullptr;
 	}
