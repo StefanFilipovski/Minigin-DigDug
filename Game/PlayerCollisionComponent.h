@@ -31,20 +31,13 @@ namespace dae
 		void Respawn(int gridX, int gridY);
 		void TriggerDeath();
 
-		// Callback is called after black screen, before respawn completes.
-		// The callback should re-create enemies and rebind input.
-
-		// Callback for soft-reset (rebinds input, etc.)
+		// Soft-reset callback: re-creates enemies and rebinds input
 		void SetSoftResetCallback(std::function<void()> cb) { m_softResetCallback = std::move(cb); }
-		// Callback for game over (transition to game over state)
+		// Game-over callback: transitions to the game over state
 		void SetGameOverCallback(std::function<void()> cb) { m_gameOverCallback = std::move(cb); }
 
-		// ---- Co-op shared-lives mode ----
-		// In this mode the component only plays the death animation; lives and
-		// respawn/game-over are coordinated externally by PlayingState. After the
-		// death animation it parks in AwaitingRespawn until PlayingState calls
-		// Respawn(). No full-screen black-out is used so the other player keeps
-		// playing uninterrupted.
+		// Co-op shared-lives mode: only plays the death animation, then parks in
+		// AwaitingRespawn for PlayingState to decide lives/respawn/game-over.
 		void SetCoopShared(bool shared) { m_coopShared = shared; }
 		void SetOnDeathStartCallback(std::function<void()> cb) { m_onDeathStartCallback = std::move(cb); }
 		bool IsAwaitingRespawn() const { return m_deathPhase == DeathPhase::AwaitingRespawn; }

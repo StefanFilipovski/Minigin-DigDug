@@ -15,7 +15,7 @@
 
 namespace dae
 {
-	// ---- IdleState (player-controlled) ----
+	// IdleState (player-controlled)
 
 	void EnemyIdleState::Enter(EnemyComponent& enemy)
 	{
@@ -55,7 +55,7 @@ namespace dae
 	{
 	}
 
-	// ---- PlayerGhostState (player-controlled Fygar) ----
+	// PlayerGhostState (player-controlled Fygar)
 
 	void EnemyPlayerGhostState::Enter(EnemyComponent& enemy)
 	{
@@ -81,9 +81,8 @@ namespace dae
 		auto* grid = enemy.GetGrid();
 		if (!movement || !grid) return nullptr;
 
-		// The player drives movement through GridMoveCommand; ghost mode lets the
-		// Fygar pass through dirt. We only evaluate exit conditions when settled
-		// on a cell so we never drop out of ghost form mid-tunnel inside dirt.
+		// Only evaluate exit conditions when settled on a cell, so the Fygar
+		// never leaves ghost form while still inside dirt.
 		if (movement->IsMoving()) return nullptr;
 
 		const auto& pos = movement->GetGridPosition();
@@ -112,7 +111,7 @@ namespace dae
 		enemy.StartGhostCooldown();
 	}
 
-	// ---- NormalState ----
+	// NormalState
 
 	EnemyNormalState::EnemyNormalState(float ghostCooldown)
 		: m_ghostCooldown(ghostCooldown)
@@ -124,9 +123,10 @@ namespace dae
 		// Randomize fire cooldown for Fygar
 		if (enemy.GetEnemyType() == EnemyType::Fygar)
 		{
-			m_fireCooldown = enemy.GetMinFireInterval() +
+			const EnemyTuning& tuning = enemy.Tuning();
+			m_fireCooldown = tuning.minFireInterval +
 				static_cast<float>(std::rand() % 100) / 100.f *
-				(enemy.GetMaxFireInterval() - enemy.GetMinFireInterval());
+				(tuning.maxFireInterval - tuning.minFireInterval);
 		}
 
 		// Randomize ghost cooldown if not already counting
@@ -267,7 +267,7 @@ namespace dae
 		return dist > 5 || (std::rand() % 100 < 20);
 	}
 
-	// ---- GhostState ----
+	// GhostState
 
 	void EnemyGhostState::Enter(EnemyComponent& enemy)
 	{
@@ -347,7 +347,7 @@ namespace dae
 		return { 1, 0 };
 	}
 
-	// ---- InflatingState ----
+	// InflatingState
 
 	EnemyInflatingState::EnemyInflatingState(const glm::ivec2& attackDir)
 		: m_attackDir(attackDir)
@@ -380,7 +380,7 @@ namespace dae
 	std::unique_ptr<EnemyState> EnemyInflatingState::Update(EnemyComponent& enemy, float deltaTime)
 	{
 		m_deflateTimer += deltaTime;
-		if (m_deflateTimer >= enemy.GetDeflateTime())
+		if (m_deflateTimer >= enemy.Tuning().deflateTime)
 		{
 			m_deflateTimer = 0.f;
 			--m_inflateStage;
@@ -419,7 +419,7 @@ namespace dae
 		m_deflateTimer = 0.f;
 		++m_inflateStage;
 
-		if (m_inflateStage >= enemy.GetMaxInflateStages())
+		if (m_inflateStage >= EnemyTuning::MaxInflateStages)
 			return std::make_unique<EnemyPoppedState>();
 
 		auto* animator = enemy.GetAnimator();
@@ -432,7 +432,7 @@ namespace dae
 		return nullptr;
 	}
 
-	// ---- PoppedState ----
+	// PoppedState
 
 	void EnemyPoppedState::Enter(EnemyComponent& enemy)
 	{
@@ -450,7 +450,7 @@ namespace dae
 	{
 	}
 
-	// ---- CrushedState ----
+	// CrushedState
 
 	void EnemyCrushedState::Enter(EnemyComponent& enemy)
 	{
@@ -468,7 +468,7 @@ namespace dae
 	{
 	}
 
-	// ---- FireBreathingState ----
+	// FireBreathingState
 
 	EnemyFireBreathingState::EnemyFireBreathingState(float ghostCooldown)
 		: m_ghostCooldown(ghostCooldown)

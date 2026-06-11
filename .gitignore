@@ -400,6 +400,7 @@ FodyWeavers.xsd
 #cmake output
 build
 build_web
+out/
 
 # Dear Imgui settings file
 imgui.ini

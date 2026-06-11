@@ -69,12 +69,18 @@ namespace dae
 			ScoreComponent* pScore1, ScoreComponent* pScore2);
 
 	private:
+		// Multiple "out" values returned as a struct (F.21)
+		struct CreatedEnemies
+		{
+			std::vector<GameObject*> enemies;
+			GameObject* pVersusEnemy{ nullptr };
+		};
+
 		static GridComponent* CreateGrid(Scene& scene, const LevelData& data);
 		static GameObject* CreatePlayer(Scene& scene, GridComponent* pGrid,
 			const LevelData& data, int playerIndex);
-		static std::vector<GameObject*> CreateEnemies(Scene& scene, GridComponent* pGrid,
-			const LevelData& data, GameMode mode, GameObject*& outVersusEnemy,
-			GameObject* pPlayerTarget);
+		static CreatedEnemies CreateEnemies(Scene& scene, GridComponent* pGrid,
+			const LevelData& data, GameMode mode, GameObject* pPlayerTarget);
 		static std::vector<GameObject*> CreateRocks(Scene& scene, GridComponent* pGrid,
 			const LevelData& data,
 			GameObject* pPlayer1, GameObject* pPlayer2,

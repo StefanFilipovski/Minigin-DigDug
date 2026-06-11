@@ -39,9 +39,8 @@ namespace dae
 		EnemyStateType GetType() const override { return EnemyStateType::Idle; }
 	};
 
-	// Player-controlled ghost (Versus Fygar) — no AI, the player drives movement
-	// while phasing through dirt. Exits back to Idle once it reaches an empty
-	// cell after having entered the dirt (so it never surfaces inside the ground).
+	// Player-controlled ghost (Versus Fygar): phases through dirt, returning to
+	// Idle once it reaches an empty cell (never surfaces inside the ground).
 	class EnemyPlayerGhostState final : public EnemyState
 	{
 	public:

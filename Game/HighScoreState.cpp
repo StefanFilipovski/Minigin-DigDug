@@ -19,7 +19,7 @@
 
 namespace dae
 {
-	// ---- HighScore-specific commands ----
+	// HighScore-specific commands
 	class HSCycleCommand final : public Command
 	{
 	public:
@@ -49,7 +49,7 @@ namespace dae
 		}
 	};
 
-	// ---- HighScoreState implementation ----
+	// HighScoreState implementation
 	void HighScoreState::OnEnter()
 	{
 		m_currentCharIndex = 0;
@@ -198,10 +198,12 @@ namespace dae
 		auto fontMed = ResourceManager::GetInstance().LoadFont("Lingua.otf", 28);
 		auto fontSmall = ResourceManager::GetInstance().LoadFont("Lingua.otf", 20);
 
+		constexpr float centerX = 320.f; // 640-wide window
+
 		// Title
 		auto title = std::make_unique<GameObject>();
-		title->AddComponent<TransformComponent>()->SetLocalPosition(260.f, 30.f);
-		title->AddComponent<TextComponent>(fontLarge, "HIGH SCORES");
+		title->AddComponent<TransformComponent>()->SetLocalPosition(0.f, 30.f);
+		title->AddComponent<TextComponent>(fontLarge, "HIGH SCORES")->SetHorizontalCenter(centerX);
 		m_pScene->Add(std::move(title));
 
 		if (!m_entryComplete)
@@ -211,14 +213,14 @@ namespace dae
 			int score = session.GetPlayer1Score();
 
 			auto scoreText = std::make_unique<GameObject>();
-			scoreText->AddComponent<TransformComponent>()->SetLocalPosition(280.f, 90.f);
+			scoreText->AddComponent<TransformComponent>()->SetLocalPosition(0.f, 90.f);
 			scoreText->AddComponent<TextComponent>(fontMed,
-				"Your score: " + std::to_string(score));
+				"Your score: " + std::to_string(score))->SetHorizontalCenter(centerX);
 			m_pScene->Add(std::move(scoreText));
 
 			auto prompt = std::make_unique<GameObject>();
-			prompt->AddComponent<TransformComponent>()->SetLocalPosition(270.f, 130.f);
-			prompt->AddComponent<TextComponent>(fontSmall, "Enter your name:");
+			prompt->AddComponent<TransformComponent>()->SetLocalPosition(0.f, 130.f);
+			prompt->AddComponent<TextComponent>(fontSmall, "Enter your name:")->SetHorizontalCenter(centerX);
 			m_pScene->Add(std::move(prompt));
 
 			// Display the 3 characters with the current one highlighted
@@ -234,21 +236,22 @@ namespace dae
 			}
 
 			auto nameGo = std::make_unique<GameObject>();
-			nameGo->AddComponent<TransformComponent>()->SetLocalPosition(340.f, 170.f);
-			nameGo->AddComponent<TextComponent>(fontLarge, nameDisplay);
+			nameGo->AddComponent<TransformComponent>()->SetLocalPosition(0.f, 170.f);
+			nameGo->AddComponent<TextComponent>(fontLarge, nameDisplay)->SetHorizontalCenter(centerX);
 			m_pScene->Add(std::move(nameGo));
 
 			auto hint = std::make_unique<GameObject>();
-			hint->AddComponent<TransformComponent>()->SetLocalPosition(200.f, 220.f);
+			hint->AddComponent<TransformComponent>()->SetLocalPosition(0.f, 220.f);
 			hint->AddComponent<TextComponent>(fontSmall,
-				"W/S = change letter   Enter/A = confirm");
+				"W/S = change letter   Enter/A = confirm")->SetHorizontalCenter(centerX);
 			m_pScene->Add(std::move(hint));
 		}
 		else
 		{
 			auto saved = std::make_unique<GameObject>();
-			saved->AddComponent<TransformComponent>()->SetLocalPosition(280.f, 90.f);
-			saved->AddComponent<TextComponent>(fontSmall, "Score saved! Press Enter to continue.");
+			saved->AddComponent<TransformComponent>()->SetLocalPosition(0.f, 90.f);
+			saved->AddComponent<TextComponent>(fontSmall,
+				"Score saved! Press Enter to continue.")->SetHorizontalCenter(centerX);
 			m_pScene->Add(std::move(saved));
 		}
 
@@ -263,18 +266,16 @@ namespace dae
 			oss << (i + 1) << ".  " << entry.name << "    " << entry.score;
 
 			auto row = std::make_unique<GameObject>();
-			row->AddComponent<TransformComponent>()->SetLocalPosition(
-				250.f, listStartY + i * 28.f);
-			row->AddComponent<TextComponent>(fontSmall, oss.str());
+			row->AddComponent<TransformComponent>()->SetLocalPosition(0.f, listStartY + i * 28.f);
+			row->AddComponent<TextComponent>(fontSmall, oss.str())->SetHorizontalCenter(centerX);
 			m_pScene->Add(std::move(row));
 		}
 
 		if (highScores.empty())
 		{
 			auto noScores = std::make_unique<GameObject>();
-			noScores->AddComponent<TransformComponent>()->SetLocalPosition(
-				280.f, listStartY);
-			noScores->AddComponent<TextComponent>(fontSmall, "No high scores yet!");
+			noScores->AddComponent<TransformComponent>()->SetLocalPosition(0.f, listStartY);
+			noScores->AddComponent<TextComponent>(fontSmall, "No high scores yet!")->SetHorizontalCenter(centerX);
 			m_pScene->Add(std::move(noScores));
 		}
 	}

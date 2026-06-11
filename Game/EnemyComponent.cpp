@@ -1,4 +1,5 @@
 #include "EnemyComponent.h"
+#include "EnemyTypeInfo.h"
 #include "EnemyStates.h"
 #include "GridComponent.h"
 #include "GridMovementComponent.h"
@@ -21,24 +22,30 @@ namespace dae
 		: Component(pOwner)
 		, m_pGrid(pGrid)
 		, m_type(type)
+		, m_pTypeInfo(&GetEnemyTypeInfo(type,
+			pGrid ? static_cast<float>(pGrid->GetCellSize()) : 32.f))
 		, m_pTarget(pTarget)
 	{
 		if (pTarget)
-			m_targets.push_back(pTarget);
+			AddTarget(pTarget);
 
 		m_pCurrentState = std::make_unique<EnemyNormalState>();
 
-		if (m_type == EnemyType::Fygar)
+		if (!m_pTypeInfo->fireTexture.empty())
 		{
-			SDL_Color redKey{ 108, 7, 0, 255 };
-			m_fireTexture = ResourceManager::GetInstance().LoadTexture("Enemy2Fire.png", redKey);
+			m_fireTexture = ResourceManager::GetInstance().LoadTexture(
+				m_pTypeInfo->fireTexture, SpriteSheetColorKey);
 		}
 	}
 
 	void EnemyComponent::AddTarget(GameObject* pTarget)
 	{
-		if (pTarget)
-			m_targets.push_back(pTarget);
+		if (!pTarget) return;
+
+		m_targets.push_back({
+			pTarget,
+			pTarget->GetComponent<PlayerCollisionComponent>(),
+			pTarget->GetComponent<GridMovementComponent>() });
 	}
 
 	void EnemyComponent::ClearTargets()
@@ -61,25 +68,23 @@ namespace dae
 
 		const auto& myPos = GetGridPosition();
 
-		for (auto* target : m_targets)
+		for (const auto& target : m_targets)
 		{
-			if (!target || target->IsMarkedForDestroy()) continue;
+			if (!target.pObject || target.pObject->IsMarkedForDestroy()) continue;
 
 			// Skip dead players — they're in the death animation
-			auto* collision = target->GetComponent<PlayerCollisionComponent>();
-			if (collision && collision->IsDead()) continue;
+			if (target.pCollision && target.pCollision->IsDead()) continue;
 
-			auto* movement = target->GetComponent<GridMovementComponent>();
-			if (!movement) continue;
+			if (!target.pMovement) continue;
 
-			const auto& targetPos = movement->GetGridPosition();
+			const auto& targetPos = target.pMovement->GetGridPosition();
 			glm::ivec2 diff = targetPos - myPos;
 			int distSq = diff.x * diff.x + diff.y * diff.y;
 
 			if (distSq < bestDistSq)
 			{
 				bestDistSq = distSq;
-				closest = target;
+				closest = target.pObject;
 			}
 		}
 
@@ -252,7 +257,7 @@ namespace dae
 
 	void EnemyComponent::StartFireBreath()
 	{
-		if (m_type != EnemyType::Fygar) return;
+		if (m_pTypeInfo->fireTexture.empty()) return; // this kind can't breathe fire
 		if (!IsAlive() || IsInflating() || IsFireBreathing()) return;
 		// Can't breathe fire while phasing through the ground
 		if (IsGhost()) return;
@@ -348,8 +353,8 @@ namespace dae
 		default: base = 200; break;
 		}
 
-		// Apply Fygar horizontal bonus: killed from left or right = 2x
-		if (m_type == EnemyType::Fygar && m_lastAttackDirection.x != 0)
+		// Horizontal kill bonus (Fygar): killed from left or right = 2x
+		if (m_pTypeInfo->horizontalKillBonus && m_lastAttackDirection.x != 0)
 			base *= 2;
 
 		return base;

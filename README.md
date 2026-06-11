@@ -1,88 +1,72 @@
-﻿# Minigin
+# Dig Dug — 2DAE Programming 4 Exam
 
-Minigin is a very small project using [SDL3](https://www.libsdl.org/) and [glm](https://github.com/g-truc/glm) for 2D c++ game projects. It is in no way a game engine, only a barebone start project where everything sdl related has been set up. It contains glm for vector math, to aleviate the need to write custom vector and matrix classes.
+A Dig Dug clone built on a small custom game engine (**Minigin**) using **SDL3**.
 
-[![Build Status](https://github.com/avadae/minigin/actions/workflows/cmake.yml/badge.svg)](https://github.com/avadae/cmake/actions)
-[![Build Status](https://github.com/avadae/minigin/actions/workflows/emscripten.yml/badge.svg)](https://github.com/avadae/emscripten/actions)
-[![GitHub Release](https://img.shields.io/github/v/release/avadae/minigin?logo=github&sort=semver)](https://github.com/avadae/minigin/releases/latest)
+## Source control
 
-# Goal
+https://github.com/StefanFilipovski/Minigin-DigDug
 
-Minigin can/may be used as a start project for the exam assignment in the course [Programming 4](https://youtu.be/j96Oh6vzhmg) at DAE. In that assignment students need to recreate a popular 80's arcade game with a game engine they need to program themselves. During the course we discuss several game programming patterns, using the book '[Game Programming Patterns](https://gameprogrammingpatterns.com/)' by [Robert Nystrom](https://github.com/munificent) as reading material. 
+The grading script clones this repository with `git clone --recurse-submodules`.
 
-# Disclaimer
+## Building
 
-Minigin is, despite perhaps the suggestion in its name, **not** a game engine. It is just a very simple SDL3 ready project with some of the scaffolding in place to get started. None of the patterns discussed in the course are used yet (except singleton which use we challenge during the course). It is up to the students to implement their own vision for their engine, apply patterns as they see fit, create their game as efficient as possible.
+This is a standard CMake project. All third-party dependencies are fetched
+automatically with `FetchContent`, so no manual setup is required.
 
-# Use
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+```
 
-Get the source from this project, or since students need to have their work on github too, they can use this repository as a template. Hit the "Use this template" button on the top right corner of the github page of this project.
+The `DigDug` executable is produced together with its `Data` folder and the required
+SDL runtime DLLs (copied next to the executable as a post-build step).
 
-## Windows version
+- **Targets:** `Minigin` (static engine library), `DigDug` (game executable), `imgui`.
+- **Dependencies (auto-fetched):** SDL3, SDL3_ttf, SDL3_mixer, glm, Dear ImGui.
+- **C++ standard:** C++20.
+- Visual Leak Detector (VLD) is used automatically when found, otherwise it is skipped.
 
-Either
-- Open the root folder in Visual Studio 2026; this will be recognized as a cmake project.
-  
-Or
-- Install CMake 
-- Install CMake and CMake Tools extensions in Visual Code
-- Open the root folder in Visual Code,  this will be recognized as a cmake project.
+## Controls
 
-Or
-- Use whatever editor you like :)
+| Action               | Player 1 (keyboard) | Player 2 / Versus (controller) |
+|----------------------|---------------------|--------------------------------|
+| Move                 | WASD                | D-Pad                          |
+| Pump / Action        | Space               | A                              |
+| Fygar fire (Versus)  | —                   | A                              |
+| Fygar ghost (Versus) | —                   | B                              |
 
-## Emscripten (web) version
+Debug keys: `F1` skip level, `F2` mute, `F3` test sound.
 
-### On windows
+### Game modes
+- **Single Player** — classic Dig Dug; scores are saved to the high-score table.
+- **Co-op** — two Dig Dug players sharing one life pool; any death sends both back to spawn.
+- **Versus** — one player is Dig Dug, the other controls a Fygar that breathes fire and can
+  phase through dirt in ghost form (on a cooldown). First to run the other out of lives wins.
 
-For installing all of the needed tools on Windows I recommend using [Chocolatey](https://chocolatey.org/). You can then run the following in a terminal to install what is needed:
+## Engine overview & design choices
 
-    choco install -y cmake
-    choco install -y emscripten
-    choco install -y ninja
-    choco install -y python
+**Minigin** is a lightweight, component-based engine. The main patterns used:
 
-In a terminal, navigate to the root folder. Run this: 
+- **Game object / component model** — `GameObject`s own `Component`s (transform, render,
+  text, sprite animator, and game-specific components). Update/render are propagated through
+  the scene graph.
+- **Command pattern** for input — `InputManager` maps keyboard scancodes and controller
+  buttons to `Command` objects, so the same actions can be rebound per game mode. Cleared
+  commands are kept alive in a graveyard for one frame so a command can safely rebind the
+  input map while it is executing.
+- **Observer pattern** — `Subject`/observers drive the HUD (score and lives displays update
+  in response to game events) without coupling gameplay code to UI.
+- **Service locator** for audio — gameplay code talks to an `ISoundService` interface.
+  `SDLSoundService` wraps SDL3_mixer and processes sound requests on a worker thread (music
+  is streamed and looped; effects are cached); `NullSoundService` provides a silent fallback
+  and is swapped in for muting.
+- **State pattern** — game flow (`MenuState`, `PlayingState`, `GameOverState`,
+  `HighScoreState`) is managed by `GameStateManager`; enemies use their own state machine
+  (`EnemyStates`) for normal/ghost/inflating/fire-breathing behaviour.
+- **Data-driven levels** — levels (grid, spawns, rocks) are loaded from JSON in `Data/Levels`
+  using nlohmann/json.
+- **Reproducible builds** — every dependency is pulled with `FetchContent` at configure time,
+  so the project builds from a clean checkout with no external library setup.
 
-    mkdir build_web
-    cd build_web
-    emcmake cmake ..
-    emmake ninja
-
-To be able to see the webpage you can start a python webserver in the build_web folder
-
-    python -m http.server
-
-Then browse to http://localhost:8000 and you're good to go.
-
-### On OSX
-
-On Mac you can use homebrew
-
-    brew install cmake
-    brew install emscripten
-    brew install python
-
-In a terminal on OSX, navigate to the root folder. Run this: 
-
-    mkdir build_web
-    cd build_web
-    emcmake cmake .. -DCMAKE_OSX_ARCHITECTURES=""
-    emmake make
-
-To be able to see the webpage you can start a python webserver in the build_web folder
-
-    python3 -m http.server
-
-Then browse to http://localhost:8000 and you're good to go.
-
-## Github Actions
-
-This project is build with github actions.
-- The CMake workflow builds the project in Debug and Release for Windows and serves as a check that the project builds on that platform.
-- The Emscripten workflow generates a web version of the project and publishes it as a [github page](https://avadae.github.io/minigin/). 
-  - The url of that page will be `https://<username>.github.io/<repository>/`
-- You can embed this page with 
-
-```<iframe style="position: absolute; top: 0px; left: 0px; width: 1024px; height: 576px;" src="https://<username>.github.io/<repository>/" loading="lazy"></iframe>```
-
+Singletons are explicitly torn down at shutdown so Visual Leak Detector does not report their
+owned resources as false-positive leaks.

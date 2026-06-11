@@ -7,6 +7,7 @@ namespace dae
 {
 	class GridComponent;
 	class TransformComponent;
+	class PumpComponent;
 
 	class GridMovementComponent final : public Component
 	{
@@ -48,6 +49,8 @@ namespace dae
 
 		GridComponent* m_pGrid;
 		TransformComponent* m_pTransform{ nullptr };
+		PumpComponent* m_pPump{ nullptr };
+		bool m_pumpCached{ false };
 
 		glm::ivec2 m_gridPos{ 0, 0 };
 		glm::ivec2 m_targetGridPos{ 0, 0 };

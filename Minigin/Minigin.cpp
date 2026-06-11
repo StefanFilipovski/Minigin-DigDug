@@ -84,10 +84,8 @@ dae::Minigin::Minigin(const std::filesystem::path& dataPath, const std::string& 
 
 dae::Minigin::~Minigin()
 {
-	// Explicitly tear down singletons before VLD scans the heap.
-	// VLD hooks into atexit() and runs before C++ static destructors,
-	// so anything owned by a Meyers singleton appears as a "leak."
-	// Order: game state → input → scenes → resources → sound → renderer → SDL.
+	// Tear down singletons here so VLD (which runs before static destructors)
+	// doesn't report their owned resources as leaks.
 	GameStateManager::GetInstance().Shutdown();
 	InputManager::GetInstance().Shutdown();
 	SceneManager::GetInstance().Shutdown();

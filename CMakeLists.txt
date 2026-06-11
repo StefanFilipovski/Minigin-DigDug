@@ -9,6 +9,12 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Statically link the MSVC runtime (/MT) so the executable runs on any PC
+# without the Visual C++ redistributable installed.
+if(MSVC)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 # ============================================================
 # Dependencies (FetchContent)
 # ============================================================
@@ -214,7 +220,7 @@ if(Steamworks_FOUND)
 endif()
 
 if(MSVC)
-  target_compile_options(Minigin PRIVATE /W3 /WX)
+  target_compile_options(Minigin PRIVATE /W4 /WX)
 else()
   target_compile_options(Minigin PRIVATE -Wall -Wextra -Werror)
 endif()
@@ -236,6 +242,7 @@ add_executable(DigDug
   Game/PlayerCollisionComponent.cpp
   Game/EnemyComponent.cpp
   Game/EnemyStates.cpp
+  Game/EnemyTypeInfo.cpp
   Game/PumpComponent.cpp
   Game/RockComponent.cpp
   Game/HealthComponent.cpp
@@ -255,7 +262,7 @@ target_include_directories(DigDug PRIVATE
 target_link_libraries(DigDug PRIVATE Minigin)
 
 if(MSVC)
-  target_compile_options(DigDug PRIVATE /W3 /WX)
+  target_compile_options(DigDug PRIVATE /W4 /WX)
 else()
   target_compile_options(DigDug PRIVATE -Wall -Wextra -Werror)
 endif()

@@ -16,11 +16,23 @@ namespace dae
 	class SpriteAnimatorComponent;
 	class RenderComponent;
 	class Texture2D;
+	class PlayerCollisionComponent;
+	struct EnemyTypeInfo;
 
 	enum class EnemyType
 	{
 		Pooka,
 		Fygar
+	};
+
+	// Per-enemy tuning values, grouped so state classes read plain data
+	// instead of going through one trivial accessor per value (C.131)
+	struct EnemyTuning
+	{
+		float deflateTime{ 1.5f };
+		float minFireInterval{ 4.f };
+		float maxFireInterval{ 10.f };
+		static constexpr int MaxInflateStages{ 5 };
 	};
 
 	class EnemyComponent final : public Component, public Subject
@@ -72,13 +84,12 @@ namespace dae
 		GridComponent* GetGrid() const { return m_pGrid; }
 		GameObject* GetTarget() const;
 
+		// Shared blackboard for the state machine — states are recreated on
+		// every transition, so the last facing direction must outlive them
 		const std::string& GetLastHorizontalAnim() const { return m_lastHorizontalAnim; }
 		void SetLastHorizontalAnim(const std::string& anim) { m_lastHorizontalAnim = anim; }
 
-		float GetDeflateTime() const { return m_deflateTime; }
-		int GetMaxInflateStages() const { return MaxInflateStages; }
-		float GetMinFireInterval() const { return m_minFireInterval; }
-		float GetMaxFireInterval() const { return m_maxFireInterval; }
+		const EnemyTuning& Tuning() const { return m_tuning; }
 
 		// Scoring helpers
 		const glm::ivec2& GetLastAttackDirection() const { return m_lastAttackDirection; }
@@ -96,18 +107,23 @@ namespace dae
 		mutable bool m_cached{ false };
 
 		EnemyType m_type;
-		GameObject* m_pTarget; // primary target (backward compat)
-		std::vector<GameObject*> m_targets; // all player targets for closest-player logic
+		const EnemyTypeInfo* m_pTypeInfo; // shared type object, never null
+		GameObject* m_pTarget; // primary/fallback target
+
+		// Target with its components resolved once at AddTarget time,
+		// so the per-frame closest-player search does no GetComponent calls
+		struct TargetEntry
+		{
+			GameObject* pObject{ nullptr };
+			PlayerCollisionComponent* pCollision{ nullptr };
+			GridMovementComponent* pMovement{ nullptr };
+		};
+		std::vector<TargetEntry> m_targets; // all targets, for closest-player logic
 
 		std::unique_ptr<EnemyState> m_pCurrentState;
 		bool m_stateInitialized{ false };
 
-		static constexpr int MaxInflateStages{ 5 };
-
-		// Settings
-		float m_deflateTime{ 1.5f };
-		float m_minFireInterval{ 4.f };
-		float m_maxFireInterval{ 10.f };
+		EnemyTuning m_tuning{};
 
 		std::string m_lastHorizontalAnim{ "walk_right" };
 

@@ -9,7 +9,14 @@ namespace dae
 	class Subject
 	{
 	public:
-		virtual ~Subject() = default;
+		Subject() = default;
+		// Clears the backlink in every registered observer
+		virtual ~Subject();
+
+		Subject(const Subject&) = delete;
+		Subject(Subject&&) = delete;
+		Subject& operator=(const Subject&) = delete;
+		Subject& operator=(Subject&&) = delete;
 
 		void AddObserver(Observer* pObserver);
 		void RemoveObserver(Observer* pObserver);
@@ -19,5 +26,11 @@ namespace dae
 
 	private:
 		std::vector<Observer*> m_Observers{};
+
+		// Reentrancy bookkeeping: while a notification is in flight, removals
+		// null their slot instead of erasing so iteration stays valid, and the
+		// vector is compacted once the outermost notification finishes.
+		int m_notifyDepth{ 0 };
+		bool m_needsCompact{ false };
 	};
 }

@@ -68,42 +68,44 @@ namespace dae
 				? "DIG DUG WINS!" : "FYGAR WINS!";
 		}
 
+		constexpr float centerX = 320.f; // 640-wide window
+
 		auto title = std::make_unique<GameObject>();
-		title->AddComponent<TransformComponent>()->SetLocalPosition(250.f, 100.f);
-		title->AddComponent<TextComponent>(fontLarge, titleText);
+		title->AddComponent<TransformComponent>()->SetLocalPosition(0.f, 100.f);
+		title->AddComponent<TextComponent>(fontLarge, titleText)->SetHorizontalCenter(centerX);
 		m_pScene->Add(std::move(title));
 
 		if (!isVersus)
 		{
 			// Player 1 score
 			auto p1Score = std::make_unique<GameObject>();
-			p1Score->AddComponent<TransformComponent>()->SetLocalPosition(280.f, 220.f);
+			p1Score->AddComponent<TransformComponent>()->SetLocalPosition(0.f, 220.f);
 			p1Score->AddComponent<TextComponent>(fontMed,
-				"Player 1: " + std::to_string(session.GetPlayer1Score()));
+				"Player 1: " + std::to_string(session.GetPlayer1Score()))->SetHorizontalCenter(centerX);
 			m_pScene->Add(std::move(p1Score));
 
 			// Player 2 score (co-op only)
 			if (session.GetGameMode() == GameMode::CoOp)
 			{
 				auto p2Score = std::make_unique<GameObject>();
-				p2Score->AddComponent<TransformComponent>()->SetLocalPosition(280.f, 270.f);
+				p2Score->AddComponent<TransformComponent>()->SetLocalPosition(0.f, 270.f);
 				p2Score->AddComponent<TextComponent>(fontMed,
-					"Player 2: " + std::to_string(session.GetPlayer2Score()));
+					"Player 2: " + std::to_string(session.GetPlayer2Score()))->SetHorizontalCenter(centerX);
 				m_pScene->Add(std::move(p2Score));
 			}
 
 			// Round reached
 			auto roundText = std::make_unique<GameObject>();
-			roundText->AddComponent<TransformComponent>()->SetLocalPosition(300.f, 340.f);
+			roundText->AddComponent<TransformComponent>()->SetLocalPosition(0.f, 340.f);
 			roundText->AddComponent<TextComponent>(fontSmall,
-				"Round reached: " + std::to_string(session.GetCurrentRound()));
+				"Round reached: " + std::to_string(session.GetCurrentRound()))->SetHorizontalCenter(centerX);
 			m_pScene->Add(std::move(roundText));
 		}
 
 		// Continue prompt
 		auto prompt = std::make_unique<GameObject>();
-		prompt->AddComponent<TransformComponent>()->SetLocalPosition(250.f, 440.f);
-		prompt->AddComponent<TextComponent>(fontSmall, "Press Enter or A to continue...");
+		prompt->AddComponent<TransformComponent>()->SetLocalPosition(0.f, 440.f);
+		prompt->AddComponent<TextComponent>(fontSmall, "Press Enter or A to continue...")->SetHorizontalCenter(centerX);
 		m_pScene->Add(std::move(prompt));
 
 		BindInput();

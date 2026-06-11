@@ -6,6 +6,7 @@ namespace dae
 	class GridMovementComponent;
 	class SpriteAnimatorComponent;
 	class PlayerCollisionComponent;
+	class PumpComponent;
 
 	// Watches movement direction and plays the correct walk/dig/idle animation.
 	// Attach to the same GameObject as GridMovementComponent and SpriteAnimatorComponent.
@@ -20,6 +21,7 @@ namespace dae
 		GridMovementComponent* m_pMovement{ nullptr };
 		SpriteAnimatorComponent* m_pAnimator{ nullptr };
 		PlayerCollisionComponent* m_pCollision{ nullptr };
+		PumpComponent* m_pPump{ nullptr };
 		bool m_cached{ false };
 	};
 }

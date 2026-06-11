@@ -21,6 +21,11 @@ namespace dae
 		void SetText(const std::string& text);
 		void SetColor(SDL_Color color);
 
+		// Horizontally centre the text around centerX (the transform's X is then
+		// ignored, only its Y is used). Re-centres automatically when the text
+		// changes width. Pass the screen-centre X, e.g. 320 for a 640-wide window.
+		void SetHorizontalCenter(float centerX) { m_Centered = true; m_CenterX = centerX; }
+
 	private:
 		void RegenerateTexture();
 
@@ -29,5 +34,7 @@ namespace dae
 		std::shared_ptr<Font> m_Font{};
 		std::shared_ptr<Texture2D> m_Texture{};
 		bool m_NeedsUpdate{ true };
+		bool m_Centered{ false };
+		float m_CenterX{ 0.f };
 	};
 }

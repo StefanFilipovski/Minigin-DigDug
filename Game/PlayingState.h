@@ -41,14 +41,14 @@ namespace dae
 		void SaveScoresToSession();
 		std::string GetLevelFilePath(int round) const;
 
-		// ---- Co-op (shared lives) ----
+		// Co-op (shared lives)
 		void OnCoopPlayerHit();           // decrement the shared pool + HUD
 		bool CoopHandleDeaths();          // returns true if it handled this frame
 		void CoopResetRound(PlayerCollisionComponent* c1, PlayerCollisionComponent* c2);
 		void SetupCoopHUD();
 		void UpdateCoopLivesHUD();
 
-		// ---- Versus mode ----
+		// Versus mode
 		void UpdateVersus();          // win/lose detection
 		void ResetVersusRound();      // full level reset after any death
 		void SetupVersusHUD();        // Fygar lives readout

@@ -101,7 +101,7 @@ namespace dae
 		m_enemies.clear();
 	}
 
-	// ---- State updates ----
+	// State updates
 
 	void RockComponent::UpdateIdle()
 	{
@@ -254,7 +254,7 @@ namespace dae
 		}
 	}
 
-	// ---- Helpers ----
+	// Helpers
 
 	bool RockComponent::IsPlayerDirectlyBelow() const
 	{
@@ -268,10 +268,8 @@ namespace dae
 			const auto& playerPos = movement->GetGridPosition();
 			const auto& targetPos = movement->GetTargetGridPosition();
 
-			// Player is "under" the rock if they're in the same column
-			// and anywhere below it — check both current AND target position,
-			// because DigCell converts the cell to Tunnel before the player
-			// actually arrives (grid pos hasn't updated yet).
+			// Player is "under" the rock if in the same column and below it.
+			// Check target position too, since DigCell frees the cell before arrival.
 			if (playerPos.x == m_gridPos.x && playerPos.y > m_gridPos.y)
 				return true;
 			if (targetPos.x == m_gridPos.x && targetPos.y > m_gridPos.y)

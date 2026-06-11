@@ -5,6 +5,7 @@
 #include "PlayerAnimController.h"
 #include "PumpComponent.h"
 #include "EnemyComponent.h"
+#include "EnemyTypeInfo.h"
 #include "PlayerCollisionComponent.h"
 #include "RockComponent.h"
 #include "ScoreComponent.h"
@@ -115,17 +116,16 @@ namespace dae
 		if (mode == GameMode::CoOp)
 			result.pPlayer2 = CreatePlayer(scene, result.pGrid, data, 1);
 
-		// Versus: Dig Dug starts with the supplied life count (3 for a fresh
-		// match, or the carried-over count on a round restart) — set this before
-		// CreateHUD so the lives readout shows the correct value.
+		// Versus: set Dig Dug's lives before CreateHUD so the readout is correct
 		if (mode == GameMode::Versus && result.pPlayer1)
 		{
 			if (auto* c = result.pPlayer1->GetComponent<PlayerCollisionComponent>())
 				c->SetLives(versusPlayerLives);
 		}
 
-		result.enemies = CreateEnemies(scene, result.pGrid, data, mode,
-			result.pVersusEnemy, result.pPlayer1);
+		CreatedEnemies created = CreateEnemies(scene, result.pGrid, data, mode, result.pPlayer1);
+		result.enemies = std::move(created.enemies);
+		result.pVersusEnemy = created.pVersusEnemy;
 
 		// Get score components before creating rocks (rocks need them for crush bonuses)
 		ScoreComponent* pScore1 = result.pPlayer1 ?
@@ -142,11 +142,11 @@ namespace dae
 			pScore1, pScore2);
 		CreateHUD(scene, mode, pScore1, pScore2, result.pPlayer1, result.pPlayer2);
 
-		// Wire up collision, pump, and scoring for each player
-		auto wirePlayer = [&](GameObject* pPlayer, const glm::ivec2& spawnPos,
-			ScoreComponent*& outScore)
+		// Wire up collision, pump, and scoring for each player.
+		// Returns the player's score component so the caller can store it (F.21).
+		auto wirePlayer = [&](GameObject* pPlayer, const glm::ivec2& spawnPos) -> ScoreComponent*
 		{
-			if (!pPlayer) return;
+			if (!pPlayer) return nullptr;
 
 			auto* collision = pPlayer->GetComponent<PlayerCollisionComponent>();
 			if (collision)
@@ -163,20 +163,21 @@ namespace dae
 					pump->AddEnemy(enemy);
 			}
 
-			outScore = pPlayer->GetComponent<ScoreComponent>();
-			if (outScore)
+			auto* score = pPlayer->GetComponent<ScoreComponent>();
+			if (score)
 			{
 				for (auto* enemy : result.enemies)
 				{
 					auto* enemyComp = enemy->GetComponent<EnemyComponent>();
 					if (enemyComp)
-						enemyComp->AddObserver(outScore);
+						enemyComp->AddObserver(score);
 				}
 			}
+			return score;
 		};
 
-		wirePlayer(result.pPlayer1, data.playerSpawn, result.pScore1);
-		wirePlayer(result.pPlayer2, data.player2Spawn, result.pScore2);
+		result.pScore1 = wirePlayer(result.pPlayer1, data.playerSpawn);
+		result.pScore2 = wirePlayer(result.pPlayer2, data.player2Spawn);
 
 		// In co-op, add Player 2 as an additional target so enemies chase
 		// the closest player instead of always targeting Player 1
@@ -248,19 +249,15 @@ namespace dae
 
 		// Pre-cache the player sprite sheets with the red background keyed out.
 		// Cached textures stay keyed for the rest of the session.
-		SDL_Color redKey{ 108, 7, 0, 255 };
-		ResourceManager::GetInstance().LoadTexture("DigDugMove1.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("DigDugMoveShovel.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("DigDugMoveShovelHole.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("DigDugDie.png", redKey);
+		ResourceManager::GetInstance().LoadTexture("DigDugMove1.png", SpriteSheetColorKey);
+		ResourceManager::GetInstance().LoadTexture("DigDugMoveShovel.png", SpriteSheetColorKey);
+		ResourceManager::GetInstance().LoadTexture("DigDugMoveShovelHole.png", SpriteSheetColorKey);
+		ResourceManager::GetInstance().LoadTexture("DigDugDie.png", SpriteSheetColorKey);
 
 		auto* render = player->AddComponent<RenderComponent>();
 		render->SetTexture("DigDugMove1.png");
 
-		// Each player sheet is 128×16: 8 frames of 16×16 (right×2, up×2, left×2, down×2)
-		// DigDugMove1.png            — walk
-		// DigDugMoveShovel.png       — dig
-		// DigDugMoveShovelHole.png   — pump pose
+		// Player sheets are 128x16: 8 frames of 16x16 (right, up, left, down x2 each)
 		constexpr int S = 16;
 		float cellSize = static_cast<float>(data.cellSize);
 
@@ -323,140 +320,46 @@ namespace dae
 		return ptr;
 	}
 
-	std::vector<GameObject*> LevelLoader::CreateEnemies(Scene& scene, GridComponent* pGrid,
-		const LevelData& data, GameMode mode, GameObject*& outVersusEnemy,
-		GameObject* pPlayerTarget)
+	LevelLoader::CreatedEnemies LevelLoader::CreateEnemies(Scene& scene, GridComponent* pGrid,
+		const LevelData& data, GameMode mode, GameObject* pPlayerTarget)
 	{
-		std::vector<GameObject*> enemies;
-		outVersusEnemy = nullptr;
+		CreatedEnemies result;
 
-		constexpr int S = 16; // Sprite size on general_sprites sheet
 		float cellSize = static_cast<float>(data.cellSize);
-
-		// Pre-cache enemy sheets with background keyed out
-		SDL_Color redKey{ 108, 7, 0, 255 };
-		ResourceManager::GetInstance().LoadTexture("Enemy1Walk.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("Enemy1Ghost.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("Enemy1Explode1.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("Enemy1Explode2.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("Enemy1Explode3.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("Enemy1Explode4.png", redKey);
-
-		ResourceManager::GetInstance().LoadTexture("Enemy2Walk.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("Enemy2Ghost.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("Enemy2Fire.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("Enemy2Explode1.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("Enemy2Explode2.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("Enemy2Explode3.png", redKey);
-		ResourceManager::GetInstance().LoadTexture("Enemy2Explode4.png", redKey);
-
-		// Enemy1Walk.png layout: 2 rows × 3 columns, each frame 13×14 px
-		//   Row 0 (y=0):  walk right — frames at x=0, 13, 26
-		//   Row 1 (y=14): walk left  — frames at x=0, 13, 26
-		constexpr int EW = 13;
-		constexpr int EH = 14;
 
 		for (size_t i = 0; i < data.enemies.size(); ++i)
 		{
 			const auto& spawn = data.enemies[i];
 			auto enemy = std::make_unique<GameObject>();
 
+			EnemyType eType = (spawn.type == EnemySpawn::Type::Pooka)
+				? EnemyType::Pooka : EnemyType::Fygar;
+
+			// Type Object: textures, animations and tuning come from the
+			// shared per-type table; animation sets are shared flyweights
+			const EnemyTypeInfo& info = GetEnemyTypeInfo(eType, cellSize);
+
 			glm::vec2 spawnPixel = pGrid->GridToPixel(spawn.gridX, spawn.gridY);
 			enemy->AddComponent<TransformComponent>()->SetLocalPosition(spawnPixel.x, spawnPixel.y);
 
 			auto* render = enemy->AddComponent<RenderComponent>();
+			render->SetTexture(info.walkTexture);
 
 			auto* animator = enemy->AddComponent<SpriteAnimatorComponent>();
 			animator->SetRenderSize(cellSize, cellSize);
-
-			if (spawn.type == EnemySpawn::Type::Pooka)
-			{
-				render->SetTexture("Enemy1Walk.png");
-
-				// Walk right/left from Enemy1Walk.png
-				// Sheet: 46×30, 3 cols × 2 rows, 13×14 content per cell
-				// Column stride = 15 (13 + 2px gap), row stride = 15 (14 + 1px gap)
-				// Col starts: x=0, 15, 30  |  Row starts: y=0 (right), y=15 (left)
-				const std::string walkTex = "Enemy1Walk.png";
-				constexpr int ECS = 15; // cell stride
-				animator->AddAnimation("walk_right", walkTex,
-					{ {0, 0, EW, EH}, {ECS, 0, EW, EH}, {ECS * 2, 0, EW, EH} }, 6.f);
-				animator->AddAnimation("walk_left", walkTex,
-					{ {0, ECS, EW, EH}, {ECS, ECS, EW, EH}, {ECS * 2, ECS, EW, EH} }, 6.f);
-
-				// No walk_up/walk_down — EnemyComponent calls Play("walk_up/down") which
-				// silently no-ops, so the last horizontal animation keeps playing.
-
-				// Enemy1Ghost.png: 1 row × 2 columns, each frame 14×8, sheet 28×8
-				const std::string ghostTex = "Enemy1Ghost.png";
-				constexpr int GW = 14;
-				constexpr int GH = 8;
-				animator->AddAnimation("ghost", ghostTex,
-					{ {0, 0, GW, GH}, {GW, 0, GW, GH} }, 6.f);
-				animator->SetAnimationRenderSize("ghost", cellSize * 0.6f, cellSize * 0.6f);
-
-				// Inflate stages — one sprite per file, faces left by default.
-				// EnemyComponent flips horizontally when attacked from the right.
-				// Sizes: 14×14, 20×16, 21×20, 25×20
-				animator->AddAnimation("inflate_1", std::string("Enemy1Explode1.png"),
-					{ {0, 0, 14, 14} }, 1.f, false);
-				animator->AddAnimation("inflate_2", std::string("Enemy1Explode2.png"),
-					{ {0, 0, 20, 16} }, 1.f, false);
-				animator->AddAnimation("inflate_3", std::string("Enemy1Explode3.png"),
-					{ {0, 0, 21, 20} }, 1.f, false);
-				animator->AddAnimation("inflate_4", std::string("Enemy1Explode4.png"),
-					{ {0, 0, 25, 20} }, 1.f, false);
-			}
-			else // Fygar
-			{
-				render->SetTexture("Enemy2Walk.png");
-
-				// Enemy2Walk.png: same layout as Pooka — 46×29, 2 rows × 3 columns
-				// Row 0: walk right, Row 1: walk left, stride 15
-				const std::string fWalkTex = "Enemy2Walk.png";
-				constexpr int ECS = 15;
-				animator->AddAnimation("walk_right", fWalkTex,
-					{ {0, 0, EW, EH}, {ECS, 0, EW, EH}, {ECS * 2, 0, EW, EH} }, 6.f);
-				animator->AddAnimation("walk_left", fWalkTex,
-					{ {0, ECS, EW, EH}, {ECS, ECS, EW, EH}, {ECS * 2, ECS, EW, EH} }, 6.f);
-
-				// Enemy2Ghost.png: 1 row × 2 columns, each frame 14×11, sheet 29×11
-				const std::string fGhostTex = "Enemy2Ghost.png";
-				constexpr int FGW = 14;
-				constexpr int FGH = 11;
-				animator->AddAnimation("ghost", fGhostTex,
-					{ {0, 0, FGW, FGH}, {FGW + 1, 0, FGW, FGH} }, 6.f);
-				animator->SetAnimationRenderSize("ghost", cellSize * 0.6f, cellSize * 0.6f);
-
-				// Enemy2Fire.png is loaded separately for fire rendering in EnemyComponent
-
-				// Inflate stages from individual sheets, faces left by default
-				animator->AddAnimation("inflate_1", std::string("Enemy2Explode1.png"),
-					{ {0, 0, 15, 13} }, 1.f, false);
-				animator->AddAnimation("inflate_2", std::string("Enemy2Explode2.png"),
-					{ {0, 0, 20, 19} }, 1.f, false);
-				animator->AddAnimation("inflate_3", std::string("Enemy2Explode3.png"),
-					{ {0, 0, 20, 21} }, 1.f, false);
-				animator->AddAnimation("inflate_4", std::string("Enemy2Explode4.png"),
-					{ {0, 0, 24, 23} }, 1.f, false);
-			}
-
+			animator->SetAnimationSet(info.animations);
 			animator->Play("walk_right");
 
 			// canDig = false — enemies move through tunnels only
-			float enemySpeed = (spawn.type == EnemySpawn::Type::Pooka) ? 2.5f : 2.0f;
-			auto* movement = enemy->AddComponent<GridMovementComponent>(pGrid, enemySpeed, false);
+			auto* movement = enemy->AddComponent<GridMovementComponent>(pGrid, info.moveSpeed, false);
 			movement->SetGridPosition(spawn.gridX, spawn.gridY);
 
 			// Ensure the spawn cell is passable so the enemy can move immediately
 			pGrid->SetCellType(spawn.gridX, spawn.gridY, CellType::Tunnel);
 
-			EnemyType eType = (spawn.type == EnemySpawn::Type::Pooka)
-				? EnemyType::Pooka : EnemyType::Fygar;
-
 			bool isVersusPlayer = (mode == GameMode::Versus &&
-				spawn.type == EnemySpawn::Type::Fygar &&
-				outVersusEnemy == nullptr);
+				eType == EnemyType::Fygar &&
+				result.pVersusEnemy == nullptr);
 
 			if (isVersusPlayer)
 			{
@@ -471,15 +374,15 @@ namespace dae
 			}
 
 			GameObject* ptr = enemy.get();
-			enemies.push_back(ptr);
+			result.enemies.push_back(ptr);
 
 			if (isVersusPlayer)
-				outVersusEnemy = ptr;
+				result.pVersusEnemy = ptr;
 
 			scene.Add(std::move(enemy));
 		}
 
-		return enemies;
+		return result;
 	}
 
 	std::vector<GameObject*> LevelLoader::CreateRocks(Scene& scene, GridComponent* pGrid,
@@ -522,7 +425,7 @@ namespace dae
 
 	void LevelLoader::CreateHUD(Scene& scene, GameMode mode,
 		ScoreComponent* pScore1, ScoreComponent* pScore2,
-		GameObject* pPlayer1, GameObject* pPlayer2)
+		GameObject* pPlayer1, GameObject* /*pPlayer2*/)
 	{
 		auto font = ResourceManager::GetInstance().LoadFont("Lingua.otf", 18);
 
@@ -535,9 +438,7 @@ namespace dae
 			pScore1->AddObserver(scoreDisplay);
 		scene.Add(std::move(scoreGo));
 
-		// Player 1 lives display — observes PlayerCollisionComponent.
-		// In co-op, lives are a shared pool shown by a single counter that
-		// PlayingState manages, so skip the per-player display here.
+		// Player 1 lives display (co-op uses a single shared counter drawn by PlayingState)
 		if (mode != GameMode::CoOp)
 		{
 			int p1Lives = 4;
@@ -593,8 +494,7 @@ namespace dae
 		GameObject* pPlayer1, GameObject* pPlayer2,
 		ScoreComponent* pScore1, ScoreComponent* pScore2)
 	{
-		GameObject* versusEnemy = nullptr;
-		auto enemies = CreateEnemies(scene, pGrid, data, mode, versusEnemy, pPlayer1);
+		auto enemies = CreateEnemies(scene, pGrid, data, mode, pPlayer1).enemies;
 
 		// Rewire player collision and pump to new enemies
 		auto wirePlayer = [&](GameObject* pPlayer)

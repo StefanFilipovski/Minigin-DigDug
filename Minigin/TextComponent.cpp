@@ -31,7 +31,10 @@ void dae::TextComponent::Render() const
 	if (!transform) return;
 
 	const auto& pos = transform->GetPosition();
-	Renderer::GetInstance().RenderTexture(*m_Texture, pos.x, pos.y);
+	float x = pos.x;
+	if (m_Centered)
+		x = m_CenterX - m_Texture->GetSize().x * 0.5f;
+	Renderer::GetInstance().RenderTexture(*m_Texture, x, pos.y);
 }
 
 void dae::TextComponent::SetText(const std::string& text)

@@ -273,9 +273,8 @@ namespace dae
 		float playerCx = pos.x + cs * 0.5f;
 		float playerCy = pos.y + cs * 0.5f;
 
-		// We always draw the sprite as a horizontal bar of size (visibleLong × short),
-		// then rotate it so that its "left edge" sits at the player center and its
-		// "right edge" reaches outward in the firing direction.
+		// Draw the rope as a horizontal bar pinned at the player and rotated
+		// to point in the firing direction.
 		double angle = 0.0;
 		if (m_fireDirection.x > 0)      angle = 0.0;    // right
 		else if (m_fireDirection.y > 0) angle = 90.0;   // down

@@ -37,7 +37,7 @@ namespace dae
 				[](const GameObject* go) { return !go || go->IsMarkedForDestroy(); }),
 			m_enemies.end());
 
-		// ---- Death state machine ----
+		// Death state machine
 		if (m_dead)
 		{
 			switch (m_deathPhase)
@@ -56,9 +56,7 @@ namespace dae
 
 						if (m_coopShared)
 						{
-							// Co-op: park here; PlayingState repositions both
-							// players (no full-screen black-out so the other
-							// player keeps playing).
+							// Co-op: wait for PlayingState to reposition both players
 							m_deathPhase = DeathPhase::AwaitingRespawn;
 						}
 						else
@@ -93,7 +91,7 @@ namespace dae
 			return;
 		}
 
-		// ---- Normal: check collision with each enemy ----
+		// Normal: check collision with each enemy
 		const auto& myPos = m_pMovement->GetGridPosition();
 		const auto& myTarget = m_pMovement->GetTargetGridPosition();
 
@@ -110,9 +108,7 @@ namespace dae
 			auto* enemyMovement = pEnemy->GetComponent<GridMovementComponent>();
 			const auto& enemyPos = enemy->GetGridPosition();
 
-			// Check all combinations of current/target positions for both
-			// player and enemy — this catches fast-moving ghosts that pass
-			// through the player's cell in a single frame
+			// Check current and target cells of both to catch fast ghosts
 			bool hit = (enemyPos == myPos) || (enemyPos == myTarget);
 
 			if (!hit && enemyMovement)
@@ -224,9 +220,8 @@ namespace dae
 				transform->SetLocalPosition(pos.x, pos.y);
 		}
 
-		// Show the player again — Restart re-applies a valid source rect even if
-		// "walk_right" was already the current animation (Play would no-op and
-		// leave the cleared rect, rendering the whole sprite sheet).
+		// Show the player again. Restart (not Play) forces the source rect to be
+		// re-applied even if "walk_right" was already current.
 		auto* render = GetOwner()->GetComponent<RenderComponent>();
 		if (render) render->ClearSourceRect();
 

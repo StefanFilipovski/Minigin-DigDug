@@ -34,15 +34,9 @@ namespace dae
 
 		m_bindingsInvalidated = false;
 
-		// Snapshot the keyboard bindings into a local vector of raw
-		// (binding, command*) pairs. This way the loop iterates over
-		// a stable snapshot and any clear/rebind during Execute() is safe.
-		// The unique_ptrs still own the commands in the map — we just
-		// borrow raw pointers for the duration of this frame.
-
-		// --- Keyboard commands ---
+		// Iterate over a snapshot so a clear/rebind during Execute() is safe.
+		// Keyboard commands
 		{
-			// Build snapshot
 			std::vector<std::pair<KeyboardBinding, Command*>> snapshot;
 			snapshot.reserve(m_KeyboardCommands.size());
 			for (const auto& [binding, pCmd] : m_KeyboardCommands)
@@ -50,9 +44,7 @@ namespace dae
 
 			for (const auto& [binding, pCmd] : snapshot)
 			{
-				// After a clear, the snapshot's pointers still point to alive
-				// commands (moved to graveyard) but we stop because the map
-				// now holds different bindings from the new state.
+				// Stop if a command cleared/rebound the bindings mid-loop
 				if (m_bindingsInvalidated)
 					break;
 
@@ -72,7 +64,7 @@ namespace dae
 			}
 		}
 
-		// --- Controller commands ---
+		// Controller commands
 		if (!m_bindingsInvalidated)
 		{
 			std::vector<std::pair<ControllerBinding, Command*>> snapshot;
@@ -133,9 +125,8 @@ namespace dae
 
 	void InputManager::ClearAllBindings()
 	{
-		// Move old commands into a graveyard — they stay alive until the
-		// next call to ProcessInput so that any currently-executing command
-		// (which lives in the old map) doesn't get destroyed mid-execution.
+		// Keep old commands alive in a graveyard until the next ProcessInput,
+		// so a command that triggers this clear isn't destroyed mid-execution.
 		for (auto& [key, cmd] : m_KeyboardCommands)
 			m_commandGraveyard.push_back(std::move(cmd));
 		m_KeyboardCommands.clear();

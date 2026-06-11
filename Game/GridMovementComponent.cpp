@@ -56,8 +56,13 @@ namespace dae
 
 		if (!m_isMoving && m_desiredDirection != glm::ivec2{ 0, 0 })
 		{
-			auto* pump = GetOwner()->GetComponent<PumpComponent>();
-			if (pump && pump->IsFiring())
+			// Resolve once — enemies have no pump, so cache the nullptr too
+			if (!m_pumpCached)
+			{
+				m_pPump = GetOwner()->GetComponent<PumpComponent>();
+				m_pumpCached = true;
+			}
+			if (m_pPump && m_pPump->IsFiring())
 				return;
 			glm::ivec2 target = m_gridPos + m_desiredDirection;
 			if (CanMoveTo(target, m_desiredDirection))

@@ -53,8 +53,15 @@ void Scene::Update(float deltaTime)
 
 void Scene::FixedUpdate(float fixedTimeStep)
 {
+	// Buffer additions here too — components can spawn objects during FixedUpdate
+	m_isUpdating = true;
 	for (auto& object : m_Objects)
 		object->FixedUpdate(fixedTimeStep);
+	m_isUpdating = false;
+
+	for (auto& pending : m_PendingAdds)
+		m_Objects.emplace_back(std::move(pending));
+	m_PendingAdds.clear();
 }
 
 void Scene::Render() const

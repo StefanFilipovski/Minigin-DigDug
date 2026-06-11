@@ -29,7 +29,7 @@
 
 namespace dae
 {
-	// ---- Playing-specific commands ----
+	// Playing-specific commands
 	class SkipLevelCommand final : public Command
 	{
 	public:
@@ -71,7 +71,7 @@ namespace dae
 		}
 	};
 
-	// ---- PlayingState implementation ----
+	// PlayingState implementation
 	void PlayingState::OnEnter()
 	{
 		auto& session = GameSession::GetInstance();
@@ -89,7 +89,7 @@ namespace dae
 
 		sceneMgr.SetActiveScene("Game");
 
-		// Fresh Versus match state (LoadLevel/ResetVersusRound manage it after this)
+		// Fresh Versus match state
 		if (m_gameMode == GameMode::Versus)
 		{
 			m_fygarLives = VersusStartLives;
@@ -107,8 +107,7 @@ namespace dae
 		LoadLevel(m_currentRound);
 		BindInput();
 
-		// Register overlay callback for black screen transitions
-		// In co-op, either player dying triggers the black screen
+		// Full-screen black-out while a player is in the black-screen death phase
 		Renderer::GetInstance().SetPostRenderCallback([this]()
 		{
 			auto isBlack = [](GameObject* pPlayer) -> bool
@@ -152,10 +151,8 @@ namespace dae
 			return;
 		}
 
-		// Nullify destroyed enemy pointers (instead of erasing) to preserve
-		// the 1:1 index correspondence with m_currentLevelData.enemies.
-		// This is critical for SoftReset, which correlates by index to decide
-		// which enemies to respawn.
+		// Nullify (don't erase) destroyed enemies to keep their index aligned
+		// with m_currentLevelData.enemies, which resets rely on.
 		for (auto& enemy : m_buildResult.enemies)
 		{
 			if (enemy && enemy->IsMarkedForDestroy())
@@ -175,9 +172,7 @@ namespace dae
 			return;
 		}
 
-		// Co-op: coordinate shared-lives deaths (waits for all death animations,
-		// then resets both players or ends the game). If a death is in progress
-		// this returns true and we skip the win check this frame.
+		// Co-op: handle shared-lives deaths; skips the win check while a death is in progress
 		if (m_gameMode == GameMode::CoOp)
 		{
 			if (CoopHandleDeaths())
@@ -262,9 +257,7 @@ namespace dae
 			// Wire death callbacks on both players' collision components
 			WirePlayerCallbacks();
 
-			// Versus: player lives set in BuildScene; refresh the Fygar-lives HUD.
-			// (The Fygar life count is owned by PlayingState and restored by the
-			// caller on a round restart.)
+			// Versus: refresh the Fygar-lives HUD (player lives set in BuildScene)
 			if (m_gameMode == GameMode::Versus)
 			{
 				m_versusEnded = false;
@@ -394,9 +387,8 @@ namespace dae
 	{
 		if (!m_pScene) return;
 
-		// Versus: any death sends BOTH characters back to spawn (dug tunnels are
-		// preserved). Defer the work to the next Update so we don't rebuild the
-		// Fygar from inside the dying player's component Update.
+		// Versus: any death restarts the round; defer to the next Update so we
+		// don't rebuild the Fygar from inside the dying player's own Update.
 		if (m_gameMode == GameMode::Versus)
 		{
 			m_pendingVersusReset = true;
@@ -412,9 +404,8 @@ namespace dae
 		std::cout << "[PlayingState] Soft reset — enemies respawned, terrain preserved\n";
 	}
 
-	// Re-creates only the enemies that were still alive, at their original spawn
-	// positions, and rewires rocks. Terrain (dug tunnels) is preserved. Shared by
-	// the single-player soft-reset and the co-op round reset.
+	// Re-creates the still-alive enemies at their spawns and rewires rocks
+	// (terrain preserved). Used by the single-player and co-op resets.
 	void PlayingState::RespawnSurvivingEnemies()
 	{
 		LevelData resetData = m_currentLevelData;
@@ -530,9 +521,7 @@ namespace dae
 		session.SetCurrentRound(m_currentRound);
 	}
 
-	// ---------------------------------------------------------------------
 	//  Versus mode
-	// ---------------------------------------------------------------------
 
 	void PlayingState::UpdateVersus()
 	{
@@ -584,9 +573,7 @@ namespace dae
 				c->Respawn(m_currentLevelData.playerSpawn.x, m_currentLevelData.playerSpawn.y);
 		}
 
-		// Re-create the Fygar at its spawn in idle state. This covers both the
-		// "Fygar was killed" and "Fygar still alive" cases uniformly. We do NOT
-		// rebuild the grid, so every tunnel the player dug stays dug.
+		// Re-create the Fygar at its spawn (grid is kept, so dug tunnels remain)
 		if (m_buildResult.pVersusEnemy && !m_buildResult.pVersusEnemy->IsMarkedForDestroy())
 			m_buildResult.pVersusEnemy->MarkForDestroy();
 
@@ -653,9 +640,7 @@ namespace dae
 		GameStateManager::GetInstance().SetState<GameOverState>();
 	}
 
-	// ---------------------------------------------------------------------
 	//  Co-op (shared lives)
-	// ---------------------------------------------------------------------
 
 	void PlayingState::OnCoopPlayerHit()
 	{
@@ -683,9 +668,8 @@ namespace dae
 		if (!p1Dead && !p2Dead)
 			return false;
 
-		// Wait until every dying player has finished its death animation. This
-		// lets the surviving player keep moving / killing / dying meanwhile, and
-		// guarantees we only resolve once (covers the both-die-together case).
+		// Wait until all dying players have finished their death animation before
+		// resolving, so a simultaneous double-death resolves only once.
 		const bool stillAnimating =
 			(p1Dead && !c1->IsAwaitingRespawn()) ||
 			(p2Dead && !c2->IsAwaitingRespawn());

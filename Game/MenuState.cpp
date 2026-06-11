@@ -17,7 +17,7 @@
 
 namespace dae
 {
-	// ---- Menu-specific commands ----
+	// Menu-specific commands
 	class MenuNavigateCommand final : public Command
 	{
 	public:
@@ -39,7 +39,7 @@ namespace dae
 		MenuState* m_pMenu;
 	};
 
-	// ---- MenuState implementation ----
+	// MenuState implementation
 	void MenuState::OnEnter()
 	{
 		auto& sceneMgr = SceneManager::GetInstance();
@@ -51,13 +51,20 @@ namespace dae
 			auto& scene = sceneMgr.CreateScene("Menu");
 			m_pScene = &scene;
 
-			auto font = ResourceManager::GetInstance().LoadFont("Lingua.otf", 36);
 			auto fontSmall = ResourceManager::GetInstance().LoadFont("Lingua.otf", 24);
 
-			// Title
+			// Title logo (replaces the old "DIG DUG" text). Source is 160×48 with
+			// a solid black background that we key out; drawn 2× and centred.
+			SDL_Color blackKey{ 0, 0, 0, 255 };
+			ResourceManager::GetInstance().LoadTexture("TitleLogo.png", blackKey);
+
+			constexpr float logoW = 320.f;
+			constexpr float logoH = 96.f;
 			auto title = std::make_unique<GameObject>();
-			title->AddComponent<TransformComponent>()->SetLocalPosition(250.f, 80.f);
-			title->AddComponent<TextComponent>(font, "DIG DUG");
+			title->AddComponent<TransformComponent>()->SetLocalPosition((640.f - logoW) * 0.5f, 60.f);
+			auto* logoRender = title->AddComponent<RenderComponent>();
+			logoRender->SetTexture("TitleLogo.png");
+			logoRender->SetRenderSize(logoW, logoH);
 			m_pTitleText = title.get();
 			scene.Add(std::move(title));
 
@@ -69,14 +76,14 @@ namespace dae
 			for (int i = 0; i < 3; ++i)
 			{
 				auto option = std::make_unique<GameObject>();
-				option->AddComponent<TransformComponent>()->SetLocalPosition(300.f, startY + i * spacing);
+				option->AddComponent<TransformComponent>()->SetLocalPosition(265.f, startY + i * spacing);
 				option->AddComponent<TextComponent>(fontSmall, labels[i]);
 				scene.Add(std::move(option));
 			}
 
 			// Selection indicator (a ">" character)
 			auto selector = std::make_unique<GameObject>();
-			selector->AddComponent<TransformComponent>()->SetLocalPosition(270.f, startY);
+			selector->AddComponent<TransformComponent>()->SetLocalPosition(235.f, startY);
 			selector->AddComponent<TextComponent>(fontSmall, ">");
 			m_pSelectorIndicator = selector.get();
 			scene.Add(std::move(selector));
@@ -162,21 +169,9 @@ namespace dae
 	{
 		auto& gsm = GameStateManager::GetInstance();
 
-		// We need to find the registered PlayingState and set its mode
-		// before the transition happens. We do this by accessing it
-		// through the state manager's map. To keep it clean, we store
-		// the mode and let PlayingState query us.
-		// However, the simplest approach: get the state pointer we stored at registration.
-
-		// The cleanest approach: PlayingState has a SetGameMode we call first.
-		// We access it via a static/global or via GameStateManager.
-		// Since GameStateManager stores states by type, we add a GetState<T>() helper.
-		// For now, we use a simpler approach with a shared GameMode variable.
-
-		// Coin-insert / start blip
 		ServiceLocator::GetSoundService().PlaySound(Sounds::Credit);
 
-		// Using the GameSession approach:
+		// PlayingState reads the chosen mode from GameSession on enter
 		GameSession::GetInstance().SetGameMode(m_selectedMode);
 		gsm.SetState<PlayingState>();
 	}
@@ -189,6 +184,6 @@ namespace dae
 		constexpr float spacing = 50.f;
 		auto* transform = m_pSelectorIndicator->GetComponent<TransformComponent>();
 		if (transform)
-			transform->SetLocalPosition(270.f, startY + m_selectedIndex * spacing);
+			transform->SetLocalPosition(235.f, startY + m_selectedIndex * spacing);
 	}
 }
