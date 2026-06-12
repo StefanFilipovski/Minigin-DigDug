@@ -26,7 +26,7 @@ namespace dae
 	};
 
 	// Per-enemy tuning values, grouped so state classes read plain data
-	// instead of going through one trivial accessor per value (C.131)
+	// instead of going through one trivial accessor per value
 	struct EnemyTuning
 	{
 		float deflateTime{ 1.5f };
@@ -44,12 +44,12 @@ namespace dae
 		void AddTarget(GameObject* pTarget);
 		void ClearTargets();
 
-		// Player-controlled mode (Versus Fygar) — disables AI, allows external commands
+		// Player-controlled mode (Versus Fygar)
 		void SetPlayerControlled(bool controlled);
 		bool IsPlayerControlled() const { return m_playerControlled; }
 		void StartFireBreath();
 
-		// Player-controlled ghost form (Versus Fygar) — phase through dirt
+		// Player-controlled ghost form (Versus Fygar)
 		void StartGhost();
 		void StartGhostCooldown() { m_ghostCooldownRemaining = GhostCooldownDuration; }
 		bool IsGhostReady() const { return m_ghostCooldownRemaining <= 0.f; }
@@ -67,7 +67,7 @@ namespace dae
 		void PumpOnce();
 		void Crush();
 
-		// State queries used by other systems (collision, pump, etc.)
+		// State queries 
 		bool IsAlive() const;
 		bool IsInflating() const;
 		bool IsGhost() const;
@@ -84,8 +84,7 @@ namespace dae
 		GridComponent* GetGrid() const { return m_pGrid; }
 		GameObject* GetTarget() const;
 
-		// Shared blackboard for the state machine — states are recreated on
-		// every transition, so the last facing direction must outlive them
+		
 		const std::string& GetLastHorizontalAnim() const { return m_lastHorizontalAnim; }
 		void SetLastHorizontalAnim(const std::string& anim) { m_lastHorizontalAnim = anim; }
 
@@ -107,8 +106,8 @@ namespace dae
 		mutable bool m_cached{ false };
 
 		EnemyType m_type;
-		const EnemyTypeInfo* m_pTypeInfo; // shared type object, never null
-		GameObject* m_pTarget; // primary/fallback target
+		const EnemyTypeInfo* m_pTypeInfo; 
+		GameObject* m_pTarget; 
 
 		// Target with its components resolved once at AddTarget time,
 		// so the per-frame closest-player search does no GetComponent calls
@@ -118,7 +117,7 @@ namespace dae
 			PlayerCollisionComponent* pCollision{ nullptr };
 			GridMovementComponent* pMovement{ nullptr };
 		};
-		std::vector<TargetEntry> m_targets; // all targets, for closest-player logic
+		std::vector<TargetEntry> m_targets;
 
 		std::unique_ptr<EnemyState> m_pCurrentState;
 		bool m_stateInitialized{ false };
@@ -135,7 +134,7 @@ namespace dae
 		static constexpr float GhostCooldownDuration{ 4.f };
 		float m_ghostCooldownRemaining{ 0.f };
 
-		// Fire rendering (Fygar only)
+		// Fire rendering 
 		std::shared_ptr<Texture2D> m_fireTexture;
 
 		void CacheComponents() const;

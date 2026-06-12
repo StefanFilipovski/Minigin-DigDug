@@ -33,7 +33,7 @@ namespace dae
 			set->Add("walk_left", "Enemy1Walk.png",
 				{ {0, Stride, FrameW, FrameH}, {Stride, Stride, FrameW, FrameH}, {Stride * 2, Stride, FrameW, FrameH} }, 6.f);
 
-			// No up/down anims; Play("walk_up/down") no-ops and keeps the last one
+			
 
 			constexpr int GhostW = 14;
 			constexpr int GhostH = 8;
@@ -41,7 +41,7 @@ namespace dae
 				{ {0, 0, GhostW, GhostH}, {GhostW, 0, GhostW, GhostH} }, 6.f);
 			set->SetRenderSize("ghost", cellSize * 0.6f, cellSize * 0.6f);
 
-			// Inflate stages: one sprite per file, faces left (flipped when hit from the right)
+			// Inflate stages
 			set->Add("inflate_1", "Enemy1Explode1.png", { {0, 0, 14, 14} }, 1.f, false);
 			set->Add("inflate_2", "Enemy1Explode2.png", { {0, 0, 20, 16} }, 1.f, false);
 			set->Add("inflate_3", "Enemy1Explode3.png", { {0, 0, 21, 20} }, 1.f, false);

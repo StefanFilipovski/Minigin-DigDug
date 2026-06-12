@@ -12,13 +12,13 @@ namespace dae
 	public:
 		Scene& CreateScene(const std::string& name = "");
 
-		// Active scene management — only the active scene is updated/rendered
+		// Active scene management
 		void SetActiveScene(const std::string& name);
 		void SetActiveScene(size_t index);
 		Scene* GetActiveScene() const;
 		Scene* GetScene(const std::string& name) const;
 
-		// Remove a scene by name (cannot remove the active scene)
+		// Remove a scene by name
 		void RemoveScene(const std::string& name);
 
 		void Update(float deltaTime);
@@ -26,7 +26,7 @@ namespace dae
 		void Render();
 		void RenderImGui();
 
-		// Explicit teardown — call before VLD scans to silence false positives
+		
 		void Shutdown();
 
 	private:

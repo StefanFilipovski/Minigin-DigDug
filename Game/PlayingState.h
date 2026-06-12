@@ -34,7 +34,7 @@ namespace dae
 		void LoadLevel(int round, int versusPlayerLives = VersusStartLives);
 		void BindInput();
 		void SoftReset();
-		void RespawnSurvivingEnemies();   // shared by single-player & co-op resets
+		void RespawnSurvivingEnemies();   
 		void AdvanceLevel();
 		void WirePlayerCallbacks();
 		void HandleGameOver();
@@ -42,16 +42,16 @@ namespace dae
 		std::string GetLevelFilePath(int round) const;
 
 		// Co-op (shared lives)
-		void OnCoopPlayerHit();           // decrement the shared pool + HUD
-		bool CoopHandleDeaths();          // returns true if it handled this frame
+		void OnCoopPlayerHit();           
+		bool CoopHandleDeaths();          
 		void CoopResetRound(PlayerCollisionComponent* c1, PlayerCollisionComponent* c2);
 		void SetupCoopHUD();
 		void UpdateCoopLivesHUD();
 
 		// Versus mode
-		void UpdateVersus();          // win/lose detection
-		void ResetVersusRound();      // full level reset after any death
-		void SetupVersusHUD();        // Fygar lives readout
+		void UpdateVersus();          
+		void ResetVersusRound();      
+		void SetupVersusHUD();        
 		void UpdateFygarLivesHUD();
 		void EndVersus(VersusWinner winner);
 

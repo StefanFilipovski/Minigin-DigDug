@@ -29,7 +29,7 @@ namespace dae
 
 	std::unique_ptr<EnemyState> EnemyIdleState::Update(EnemyComponent& enemy, float /*deltaTime*/)
 	{
-		// No AI — just update walk animation based on current movement direction
+		
 		auto* movement = enemy.GetMovement();
 		auto* animator = enemy.GetAnimator();
 		if (!movement || !animator) return nullptr;
@@ -81,8 +81,7 @@ namespace dae
 		auto* grid = enemy.GetGrid();
 		if (!movement || !grid) return nullptr;
 
-		// Only evaluate exit conditions when settled on a cell, so the Fygar
-		// never leaves ghost form while still inside dirt.
+		
 		if (movement->IsMoving()) return nullptr;
 
 		const auto& pos = movement->GetGridPosition();
@@ -94,8 +93,7 @@ namespace dae
 			return nullptr; // never exit while standing in dirt
 		}
 
-		// On an empty cell (Tunnel/Surface): exit once we've travelled through
-		// dirt, or once the safety duration elapses.
+		
 		if (m_hasBeenInDirt || m_timer >= m_maxDuration)
 			return std::make_unique<EnemyIdleState>();
 
@@ -107,7 +105,7 @@ namespace dae
 		auto* movement = enemy.GetMovement();
 		if (movement) movement->SetGhostMode(false);
 
-		// Start the cooldown before ghost form can be used again
+		
 		enemy.StartGhostCooldown();
 	}
 
@@ -129,7 +127,7 @@ namespace dae
 				(tuning.maxFireInterval - tuning.minFireInterval);
 		}
 
-		// Randomize ghost cooldown if not already counting
+		// Randomize ghost cooldown
 		if (m_ghostCooldown < 0.f)
 		{
 			m_ghostCooldown = m_minGhostInterval +
@@ -363,8 +361,7 @@ namespace dae
 		if (movement)
 		{
 			movement->SnapToCurrentCell();
-			// Lock movement while inflating — this also ignores a player-
-			// controlled Fygar's input so it can't wriggle off the pump.
+			// Lock movement while inflating
 			movement->SetFrozen(true);
 		}
 

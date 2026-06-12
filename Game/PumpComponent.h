@@ -24,7 +24,7 @@ namespace dae
 		void Update(float deltaTime) override;
 		void Render() const override;
 
-		// Called by the pump command (button press)
+		// Called by the pump command
 		void Fire();
 
 		void AddEnemy(GameObject* pEnemy);
@@ -66,19 +66,19 @@ namespace dae
 		float m_retractTimer{ 0.f };
 		static constexpr float RetractDelay{ 0.15f };
 
-		// Hold-to-pump: slower auto-pump rate while button is held
-		bool  m_fireButtonHeld{ false };       // true during frames where Fire() is called
-		bool  m_fireButtonHeldPrev{ false };    // held state from previous frame
-		float m_holdPumpTimer{ 0.f };           // accumulator for auto-pump while holding
-		static constexpr float HoldPumpInterval{ 0.4f };  // seconds between auto-pumps when holding
+		// Hold-to-pump
+		bool  m_fireButtonHeld{ false };      
+		bool  m_fireButtonHeldPrev{ false };  
+		float m_holdPumpTimer{ 0.f };         
+		static constexpr float HoldPumpInterval{ 0.4f };  
 
-		// PumpString.png is a 32×6 horizontal sprite (extending right).
-		// We rotate it for up/down/left and clip the source to animate extension.
+		
+		
 		std::shared_ptr<Texture2D> m_hoseTexture;
-		float m_hoseSrcW{ 32.f }; // native sprite width
-		float m_hoseSrcH{ 6.f };  // native sprite height (the "thickness" of the rope)
-		float m_hoseRenderLong{ 32.f };  // pixels along the firing axis at full extension
-		float m_hoseRenderShort{ 6.f };  // pixels perpendicular to firing axis
+		float m_hoseSrcW{ 32.f }; 
+		float m_hoseSrcH{ 6.f };  
+		float m_hoseRenderLong{ 32.f };  
+		float m_hoseRenderShort{ 6.f };  
 
 		void CalculateRange();
 		void CacheComponents();

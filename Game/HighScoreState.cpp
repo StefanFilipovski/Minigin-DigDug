@@ -70,7 +70,6 @@ namespace dae
 
 		sceneMgr.SetActiveScene("HighScore");
 
-		// Stop the Game Over fanfare (a long one-shot) before the entry jingle
 		ServiceLocator::GetSoundService().StopAllSounds();
 		ServiceLocator::GetSoundService().PlaySound(Sounds::NameEntry);
 
@@ -147,7 +146,7 @@ namespace dae
 
 		RebuildDisplay();
 
-		// Rebind input: now only "return to menu" is available
+		// Rebind input
 		auto& input = InputManager::GetInstance();
 		input.ClearAllBindings();
 
@@ -164,7 +163,7 @@ namespace dae
 		auto& input = InputManager::GetInstance();
 		input.ClearAllBindings();
 
-		// W/S or DPad Up/Down to cycle letters
+		
 		input.BindKeyboardCommand(SDL_SCANCODE_W, KeyState::Down,
 			std::make_unique<HSCycleCommand>(this, -1));
 		input.BindKeyboardCommand(SDL_SCANCODE_S, KeyState::Down,
@@ -174,7 +173,6 @@ namespace dae
 		input.BindKeyboardCommand(SDL_SCANCODE_DOWN, KeyState::Down,
 			std::make_unique<HSCycleCommand>(this, 1));
 
-		// Enter/Space or A to confirm character
 		input.BindKeyboardCommand(SDL_SCANCODE_RETURN, KeyState::Down,
 			std::make_unique<HSConfirmCommand>(this));
 		input.BindKeyboardCommand(SDL_SCANCODE_SPACE, KeyState::Down,
@@ -198,7 +196,7 @@ namespace dae
 		auto fontMed = ResourceManager::GetInstance().LoadFont("Lingua.otf", 28);
 		auto fontSmall = ResourceManager::GetInstance().LoadFont("Lingua.otf", 20);
 
-		constexpr float centerX = 320.f; // 640-wide window
+		constexpr float centerX = 320.f; 
 
 		// Title
 		auto title = std::make_unique<GameObject>();
@@ -223,8 +221,7 @@ namespace dae
 			prompt->AddComponent<TextComponent>(fontSmall, "Enter your name:")->SetHorizontalCenter(centerX);
 			m_pScene->Add(std::move(prompt));
 
-			// Display the 3 characters with the current one highlighted
-			// Build string like "A B C" with brackets around active: "A [B] C"
+			
 			std::string nameDisplay;
 			for (int i = 0; i < NameLength; ++i)
 			{

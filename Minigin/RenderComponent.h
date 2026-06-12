@@ -18,12 +18,12 @@ namespace dae
 		void SetTexture(const std::string& filename);
 		void SetTexture(std::shared_ptr<Texture2D> texture);
 
-		// Source rectangle for sprite sheets — defines which part of the texture to draw
+		// Source rectangle for sprite sheets
 		void SetSourceRect(int x, int y, int w, int h);
 		void ClearSourceRect();
 		bool HasSourceRect() const { return m_useSourceRect; }
 
-		// Destination size override — draws at this size instead of texture size
+		// size override 
 		void SetRenderSize(float w, float h);
 		void ClearRenderSize();
 

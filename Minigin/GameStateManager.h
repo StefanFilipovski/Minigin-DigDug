@@ -11,8 +11,7 @@ namespace dae
 	class GameStateManager final : public Singleton<GameStateManager>
 	{
 	public:
-		// Register a state so it can be switched to later by type.
-		// Returns a raw pointer for optional further setup.
+		
 		template <typename T, typename... Args>
 		T* RegisterState(Args&&... args)
 		{
@@ -35,7 +34,7 @@ namespace dae
 
 			m_pCurrentState = it->second.get();
 
-			// Note: We do NOT clear input bindings here because SetState can be
+			// Note: We do not clear input bindings here because SetState can be
 			// called from inside a command's Execute (during ProcessInput iteration).
 			// Clearing would destroy the command that's currently executing — UB.
 			// Instead, each state's OnEnter() calls ClearAllBindings() first,
@@ -71,7 +70,7 @@ namespace dae
 
 		GameState* GetCurrentState() const { return m_pCurrentState; }
 
-		// Explicit teardown — releases all states before VLD scans
+		
 		void Shutdown()
 		{
 			if (m_pCurrentState)

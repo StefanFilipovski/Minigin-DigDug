@@ -15,7 +15,7 @@ namespace dae
 		SetPositionDirty();
 	}
 
-	// Mark this node and all children as dirty (propagate down the hierarchy)
+	
 	void TransformComponent::SetPositionDirty()
 	{
 		m_positionIsDirty = true;

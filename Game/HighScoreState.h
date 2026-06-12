@@ -20,9 +20,9 @@ namespace dae
 		void Render() const override;
 
 		// Called by input commands
-		void CycleCharacter(int direction);  // +1 = next letter, -1 = previous
-		void ConfirmCharacter();             // Lock current letter, move to next
-		void FinishEntry();                  // Submit the name
+		void CycleCharacter(int direction);  
+		void ConfirmCharacter();             
+		void FinishEntry();                  
 
 	private:
 		void BindInput();
@@ -30,13 +30,13 @@ namespace dae
 
 		Scene* m_pScene{ nullptr };
 
-		// Arcade-style name entry: 3 characters, A-Z
+		// Arcade-style name entry
 		static constexpr int NameLength{ 3 };
 		std::array<char, NameLength> m_nameChars{ 'A', 'A', 'A' };
 		int m_currentCharIndex{ 0 };
 		bool m_entryComplete{ false };
 
-		// Display objects (raw pointers for updating text)
+		// Display objects
 		GameObject* m_pNameDisplay{ nullptr };
 		GameObject* m_pCursorDisplay{ nullptr };
 		GameObject* m_pHighScoreList{ nullptr };

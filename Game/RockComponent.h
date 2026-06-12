@@ -15,12 +15,12 @@ namespace dae
 
 	enum class RockState
 	{
-		Idle,       // Sitting on solid ground
-		Unstable,   // Cell below is dug, player is directly underneath — waiting
-		Jittering,  // Player moved away, shaking before falling
-		Falling,    // Dropping through tunnels, crushing enemies
-		Breaking,   // Hit the ground, playing break animation
-		Destroyed   // Done — marked for removal
+		Idle,       
+		Unstable,   
+		Jittering,  
+		Falling,    
+		Breaking,   
+		Destroyed   
 	};
 
 	class RockComponent final : public Component, public Subject

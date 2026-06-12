@@ -7,7 +7,6 @@
 #include "SceneManager.h"
 #include "ResourceManager.h"
 
-// Game state machine
 #include "GameStateManager.h"
 #include "GameSession.h"
 #include "MenuState.h"
@@ -19,7 +18,7 @@ namespace fs = std::filesystem;
 
 static void load()
 {
-	// Initialize game session — load persistent high scores
+	// Initialize game session
 	auto& session = dae::GameSession::GetInstance();
 	session.LoadHighScores("Data/highscores.txt");
 

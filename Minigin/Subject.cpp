@@ -62,9 +62,7 @@ namespace dae
 
 	void Subject::NotifyObservers(EventId event, GameObject* pGameObject)
 	{
-		// Index-based iteration with null-slot removal — no allocation per
-		// notify, and safe against observers (un)subscribing in their Notify.
-		// Observers added during this notification are not notified this round.
+		
 		++m_notifyDepth;
 		const size_t count = m_Observers.size();
 		for (size_t i = 0; i < count; ++i)

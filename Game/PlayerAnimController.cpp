@@ -20,10 +20,8 @@ namespace dae
 
 		if (!m_pMovement || !m_pAnimator) return;
 
-		// Don't override death animation — let it play to completion
 		if (m_pCollision && m_pCollision->IsDead()) return;
 
-		// Don't override pump animation — PumpComponent manages it
 		if (m_pPump && m_pPump->IsFiring()) return;
 
 		const auto& dir = m_pMovement->GetCurrentDirection();

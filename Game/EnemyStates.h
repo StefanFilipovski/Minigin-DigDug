@@ -9,7 +9,7 @@ namespace dae
 	enum class EnemyStateType
 	{
 		Normal,
-		Idle, // Player-controlled: no AI, just animations
+		Idle, // Player-controlled
 		Ghost,
 		Inflating,
 		Popped,
@@ -17,7 +17,7 @@ namespace dae
 		FireBreathing
 	};
 
-	// Base class — states return a new state to transition, or nullptr to stay
+	// Base class
 	class EnemyState
 	{
 	public:
@@ -29,7 +29,7 @@ namespace dae
 		virtual EnemyStateType GetType() const = 0;
 	};
 
-	// Player-controlled idle state — no AI, just updates walk animation based on movement
+	// Player-controlled idle state
 	class EnemyIdleState final : public EnemyState
 	{
 	public:
@@ -39,8 +39,8 @@ namespace dae
 		EnemyStateType GetType() const override { return EnemyStateType::Idle; }
 	};
 
-	// Player-controlled ghost (Versus Fygar): phases through dirt, returning to
-	// Idle once it reaches an empty cell (never surfaces inside the ground).
+	// Player-controlled ghost (Versus Fygar)
+	
 	class EnemyPlayerGhostState final : public EnemyState
 	{
 	public:
@@ -52,10 +52,10 @@ namespace dae
 	private:
 		bool m_hasBeenInDirt{ false };
 		float m_timer{ 0.f };
-		float m_maxDuration{ 5.f }; // safety cap so the player can't ghost forever
+		float m_maxDuration{ 5.f }; 
 	};
 
-	// Normal tunnel movement — chases the player, decides ghost/fire transitions
+	// Normal tunnel movement
 	class EnemyNormalState final : public EnemyState
 	{
 	public:
@@ -105,7 +105,7 @@ namespace dae
 		void Exit(EnemyComponent& enemy) override;
 		EnemyStateType GetType() const override { return EnemyStateType::Inflating; }
 
-		// Returns a new state (Popped) if max inflate reached, else nullptr
+		// Returns a new state
 		std::unique_ptr<EnemyState> PumpOnce(EnemyComponent& enemy);
 		int GetInflateStage() const { return m_inflateStage; }
 

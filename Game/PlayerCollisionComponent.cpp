@@ -31,7 +31,7 @@ namespace dae
 
 		if (!m_pMovement) return;
 
-		// Prune enemies destroyed last frame (prevents dangling pointers)
+		// Prune enemies destroyed last frame
 		m_enemies.erase(
 			std::remove_if(m_enemies.begin(), m_enemies.end(),
 				[](const GameObject* go) { return !go || go->IsMarkedForDestroy(); }),
@@ -91,7 +91,6 @@ namespace dae
 			return;
 		}
 
-		// Normal: check collision with each enemy
 		const auto& myPos = m_pMovement->GetGridPosition();
 		const auto& myTarget = m_pMovement->GetTargetGridPosition();
 
@@ -102,7 +101,7 @@ namespace dae
 			auto* enemy = pEnemy->GetComponent<EnemyComponent>();
 			if (!enemy || !enemy->IsAlive()) continue;
 
-			// Skip inflating enemies — they're safe to walk through
+			// Skip inflating enemies
 			if (enemy->IsInflating()) continue;
 
 			auto* enemyMovement = pEnemy->GetComponent<GridMovementComponent>();
@@ -117,7 +116,7 @@ namespace dae
 				hit = (enemyTarget == myPos) || (enemyTarget == myTarget);
 			}
 
-			// Fire collision — check if player is in a Fygar's fire path
+			// Fire collision
 			if (!hit && enemy->IsPositionInFire(myPos))
 				hit = true;
 
@@ -147,8 +146,7 @@ namespace dae
 
 		if (m_coopShared)
 		{
-			// Lives are a shared pool owned by PlayingState — notify it so it
-			// can decrement the count and update the HUD.
+			
 			if (m_onDeathStartCallback)
 				m_onDeathStartCallback();
 		}
@@ -157,8 +155,7 @@ namespace dae
 			--m_lives;
 		}
 
-		// No dedicated player-death file in the Data/Sounds set, so reuse the
-		// "Monster - Blow" effect for death feedback.
+		
 		ServiceLocator::GetSoundService().PlaySound(Sounds::MonsterBlow);
 
 		auto* pump = GetOwner()->GetComponent<PumpComponent>();
@@ -175,7 +172,7 @@ namespace dae
 		if (m_pAnimator)
 		{
 			m_pAnimator->Play("die");
-			m_pAnimator->Resume(); // make sure it's not paused
+			m_pAnimator->Resume(); 
 		}
 
 		m_deathPhase = DeathPhase::DyingAnimation;
@@ -197,7 +194,7 @@ namespace dae
 		// Respawn player at spawn position
 		Respawn(m_spawnPos.x, m_spawnPos.y);
 
-		// Fire callback — PlayingState uses this to re-create enemies and rebind input
+		// Fire callback
 		if (m_softResetCallback)
 			m_softResetCallback();
 	}
@@ -220,8 +217,7 @@ namespace dae
 				transform->SetLocalPosition(pos.x, pos.y);
 		}
 
-		// Show the player again. Restart (not Play) forces the source rect to be
-		// re-applied even if "walk_right" was already current.
+		
 		auto* render = GetOwner()->GetComponent<RenderComponent>();
 		if (render) render->ClearSourceRect();
 

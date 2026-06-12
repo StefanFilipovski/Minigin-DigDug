@@ -242,14 +242,14 @@ namespace dae
 		}
 	}
 
-	// External triggers — these still call ChangeState directly
+	// External triggers 
 
 	void EnemyComponent::SetPlayerControlled(bool controlled)
 	{
 		m_playerControlled = controlled;
 		if (controlled)
 		{
-			// Switch to idle state — no AI, just animations
+			// Switch to idle state
 			ChangeState(std::make_unique<EnemyIdleState>());
 			m_stateInitialized = true;
 		}
@@ -257,8 +257,9 @@ namespace dae
 
 	void EnemyComponent::StartFireBreath()
 	{
-		if (m_pTypeInfo->fireTexture.empty()) return; // this kind can't breathe fire
+		if (m_pTypeInfo->fireTexture.empty()) return; 
 		if (!IsAlive() || IsInflating() || IsFireBreathing()) return;
+
 		// Can't breathe fire while phasing through the ground
 		if (IsGhost()) return;
 
@@ -353,7 +354,6 @@ namespace dae
 		default: base = 200; break;
 		}
 
-		// Horizontal kill bonus (Fygar): killed from left or right = 2x
 		if (m_pTypeInfo->horizontalKillBonus && m_lastAttackDirection.x != 0)
 			base *= 2;
 

@@ -44,7 +44,6 @@ namespace dae
 	{
 		auto& sceneMgr = SceneManager::GetInstance();
 
-		// Create the menu scene if it doesn't exist yet
 		m_pScene = sceneMgr.GetScene("Menu");
 		if (!m_pScene)
 		{
@@ -53,8 +52,7 @@ namespace dae
 
 			auto fontSmall = ResourceManager::GetInstance().LoadFont("Lingua.otf", 24);
 
-			// Title logo (replaces the old "DIG DUG" text). Source is 160×48 with
-			// a solid black background that we key out; drawn 2× and centred.
+			
 			SDL_Color blackKey{ 0, 0, 0, 255 };
 			ResourceManager::GetInstance().LoadTexture("TitleLogo.png", blackKey);
 
@@ -81,7 +79,7 @@ namespace dae
 				scene.Add(std::move(option));
 			}
 
-			// Selection indicator (a ">" character)
+			// Selection indicator
 			auto selector = std::make_unique<GameObject>();
 			selector->AddComponent<TransformComponent>()->SetLocalPosition(235.f, startY);
 			selector->AddComponent<TextComponent>(fontSmall, ">");
@@ -102,8 +100,7 @@ namespace dae
 		UpdateSelectionVisual();
 		BindInput();
 
-		// Clear any lingering jingles (Game Over / Name Entry) so they don't
-		// play on top of the menu music.
+		
 		ServiceLocator::GetSoundService().StopAllSounds();
 		ServiceLocator::GetSoundService().PlayMusic(Sounds::MenuMusic);
 	}

@@ -60,7 +60,7 @@ namespace dae
 
 		const bool isVersus = (session.GetGameMode() == GameMode::Versus);
 
-		// Title — in Versus, announce the winner instead of "GAME OVER"
+		// Title
 		std::string titleText = "GAME OVER";
 		if (isVersus)
 		{
@@ -68,7 +68,7 @@ namespace dae
 				? "DIG DUG WINS!" : "FYGAR WINS!";
 		}
 
-		constexpr float centerX = 320.f; // 640-wide window
+		constexpr float centerX = 320.f;
 
 		auto title = std::make_unique<GameObject>();
 		title->AddComponent<TransformComponent>()->SetLocalPosition(0.f, 100.f);

@@ -6,7 +6,7 @@
 namespace dae
 {
 	// Versus: triggers the player-controlled Fygar's ghost form so it can
-	// phase through dirt (subject to a cooldown).
+	// phase through dirt 
 	class GhostCommand final : public Command
 	{
 	public:

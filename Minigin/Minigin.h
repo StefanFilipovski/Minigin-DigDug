@@ -27,7 +27,7 @@ namespace dae
 		std::chrono::high_resolution_clock::time_point m_lastTime{};
 		float m_lag{};
 
-		static constexpr float MsPerFrame{ 1000.f / 60.f }; // 60 FPS cap
-		static constexpr float	FixedTimeStep{ 0.02f };	 // 50Hz fixed update
+		static constexpr float MsPerFrame{ 1000.f / 60.f }; 
+		static constexpr float	FixedTimeStep{ 0.02f };	 
 	};
 }

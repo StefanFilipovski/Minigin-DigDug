@@ -35,7 +35,13 @@ SDL runtime DLLs (copied next to the executable as a post-build step).
 | Fygar fire (Versus)  | —                   | A                              |
 | Fygar ghost (Versus) | —                   | B                              |
 
-Debug keys: `F1` skip level, `F2` mute, `F3` test sound.
+In single player, Player 1 can play entirely with the keyboard **or** entirely with
+the first controller (D-Pad + A), including the menus and high-score entry.
+In co-op and versus, the first controller belongs to Player 2 / the Fygar;
+Player 1 (Dig Dug) plays on the keyboard or on a **second** controller, so both
+two-player modes work with one keyboard + one gamepad or with two gamepads.
+
+Debug keys: `F1` skip level, `F2` mute/unmute, `F3` test sound.
 
 ### Game modes
 - **Single Player** — classic Dig Dug; scores are saved to the high-score table.
@@ -56,10 +62,18 @@ Debug keys: `F1` skip level, `F2` mute, `F3` test sound.
   input map while it is executing.
 - **Observer pattern** — `Subject`/observers drive the HUD (score and lives displays update
   in response to game events) without coupling gameplay code to UI.
-- **Service locator** for audio — gameplay code talks to an `ISoundService` interface.
-  `SDLSoundService` wraps SDL3_mixer and processes sound requests on a worker thread (music
-  is streamed and looped; effects are cached); `NullSoundService` provides a silent fallback
-  and is swapped in for muting.
+- **Service locator + event queue** for audio — gameplay code talks to an `ISoundService`
+  interface. `SDLSoundService` wraps SDL3_mixer and processes sound requests on a worker
+  thread through a queue (the engine's threading requirement). All audio is predecoded and
+  cached; the looping music track self-heals via a stopped-callback and a watchdog, and
+  muting silences the mixer gain so playback state survives mute/unmute. `NullSoundService`
+  provides a silent fallback when no audio device is available.
+- **Flyweight** — sprite animation data (frames, fps, loop flags) is built once per entity
+  type as an immutable shared `AnimationSet`; each animator instance only stores its own
+  playback state.
+- **Type object** — enemy types (textures, animations, abilities, fire color key) are rows
+  in a data table (`EnemyTypeInfo`) instead of code branches, so adding an enemy type is a
+  data change.
 - **State pattern** — game flow (`MenuState`, `PlayingState`, `GameOverState`,
   `HighScoreState`) is managed by `GameStateManager`; enemies use their own state machine
   (`EnemyStates`) for normal/ghost/inflating/fire-breathing behaviour.

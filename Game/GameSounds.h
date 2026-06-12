@@ -2,7 +2,7 @@
 
 namespace dae::Sounds
 {
-	// Music (looping background tracks)
+	// Music
 	inline constexpr const char* MenuMusic   = "Data/Sounds/02. Start Music.mp3";
 	inline constexpr const char* GameMusic    = "Data/Sounds/03. In-Game Music.mp3";
 

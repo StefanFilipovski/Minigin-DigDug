@@ -6,8 +6,7 @@ namespace dae
 	class Controller final
 	{
 	public:
-		// Button bitmasks — mirrors XInput values so callers can use these
-		// without including XInput.h themselves
+		// Button bitmasks
 		enum class Button : unsigned int
 		{
 			DPadUp = 0x0001,

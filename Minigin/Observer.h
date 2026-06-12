@@ -11,8 +11,7 @@ namespace dae
 	{
 	public:
 		Observer() = default;
-		// Auto-unregisters from every subject still watching us,
-		// so a destroyed observer can never leave a dangling pointer behind
+		
 		virtual ~Observer();
 
 		Observer(const Observer&) = delete;

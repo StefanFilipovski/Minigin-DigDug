@@ -108,7 +108,7 @@ namespace dae
 		// Check if the cell directly below is dug out
 		int belowY = m_gridPos.y + 1;
 		if (!m_pGrid->IsInBounds(m_gridPos.x, belowY))
-			return; // At bottom of grid, can't fall
+			return; 
 
 		CellType cellBelow = m_pGrid->GetCellType(m_gridPos.x, belowY);
 		if (cellBelow == CellType::Tunnel)
@@ -118,7 +118,7 @@ namespace dae
 				m_state = RockState::Unstable;
 			else
 			{
-				// No player underneath — start jittering immediately
+				// No player underneath
 				m_state = RockState::Jittering;
 				m_jitterTimer = 0.f;
 			}
@@ -140,7 +140,7 @@ namespace dae
 	{
 		m_jitterTimer += deltaTime;
 
-		// Shake effect — oscillate left/right
+		// Shake effect
 		m_jitterOffset = std::sin(m_jitterTimer * m_jitterSpeed) * 2.f;
 
 		if (m_jitterTimer >= m_jitterDuration)
@@ -153,7 +153,7 @@ namespace dae
 
 			ServiceLocator::GetSoundService().PlaySound(Sounds::RockDropping);
 
-			// Store starting pixel Y for smooth falling
+			
 			glm::vec2 cellPixel = m_pGrid->GridToPixel(m_gridPos.x, m_gridPos.y);
 			m_pixelY = cellPixel.y;
 		}
@@ -163,7 +163,7 @@ namespace dae
 	{
 		float cellSize = static_cast<float>(m_pGrid->GetCellSize());
 
-		// Tick grace timer — player who triggered the fall gets time to escape
+		// Tick grace timer
 		if (m_playerGraceTimer > 0.f)
 			m_playerGraceTimer -= deltaTime;
 
@@ -204,7 +204,7 @@ namespace dae
 			CellType cellBelow = m_pGrid->GetCellType(m_gridPos.x, nextRow);
 			if (cellBelow == CellType::Dirt)
 			{
-				// Hit solid ground — check if we've passed the cell center
+				
 				glm::vec2 cellCenter = m_pGrid->GridToPixelCenter(m_gridPos.x, m_gridPos.y);
 				if (m_pixelY + cellSize * 0.5f >= cellCenter.y)
 					shouldStop = true;
@@ -268,8 +268,7 @@ namespace dae
 			const auto& playerPos = movement->GetGridPosition();
 			const auto& targetPos = movement->GetTargetGridPosition();
 
-			// Player is "under" the rock if in the same column and below it.
-			// Check target position too, since DigCell frees the cell before arrival.
+			
 			if (playerPos.x == m_gridPos.x && playerPos.y > m_gridPos.y)
 				return true;
 			if (targetPos.x == m_gridPos.x && targetPos.y > m_gridPos.y)
@@ -282,7 +281,7 @@ namespace dae
 	{
 		float cellSize = static_cast<float>(m_pGrid->GetCellSize());
 		float rockCenterY = m_pixelY + cellSize * 0.5f;
-		float crushThreshold = cellSize * 1.0f; // full cell of overlap tolerance
+		float crushThreshold = cellSize * 1.0f; 
 
 		for (auto* pEnemy : m_enemies)
 		{
@@ -297,7 +296,7 @@ namespace dae
 			const auto& enemyGridPos = movement->GetGridPosition();
 			const auto& enemyTargetPos = movement->GetTargetGridPosition();
 
-			// Enemy must be in the same column (current or target position)
+			// Enemy must be in the same column
 			if (enemyGridPos.x != m_gridPos.x && enemyTargetPos.x != m_gridPos.x)
 				continue;
 
@@ -339,8 +338,7 @@ namespace dae
 
 			float playerCenterY = playerTransform->GetWorldPosition().y + cellSize * 0.5f;
 
-			// Rock can only crush things it's falling ONTO — player must be
-			// at or below the rock, not above it.
+			
 			if (playerCenterY < rockCenterY) continue;
 
 			float dist = playerCenterY - rockCenterY;

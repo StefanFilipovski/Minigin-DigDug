@@ -24,8 +24,7 @@ namespace dae
 		SDL_Color redKey{ 108, 7, 0, 255 };
 		m_hoseTexture = ResourceManager::GetInstance().LoadTexture("PumpString.png", redKey);
 
-		// Native sprite is 32×6 (right-facing). Scale it to grid cell size:
-		// the long axis spans 2 cells (32px = 2 × 16px native), the short axis is 6/16 of a cell.
+		
 		float cs = static_cast<float>(pGrid->GetCellSize());
 		float scale = cs / 16.f;
 		m_hoseRenderLong = m_hoseSrcW * scale;
@@ -57,16 +56,16 @@ namespace dae
 		CacheComponents();
 		if (!m_pMovement) return;
 
-		// Don't allow pumping while dead — prevents overriding the die animation
+		// Don't allow pumping while dead
 		if (m_pCollision && m_pCollision->IsDead()) return;
 
-		// Mark button as held this frame (cleared at end of Update)
+		// Mark button as held this frame 
 		m_fireButtonHeld = true;
 
 		// While latched onto an enemy: tap = immediate pump, hold = handled in Update
 		if (m_state == PumpState::Latched)
 		{
-			// Fresh press (wasn't held last frame) => immediate tap pump
+			// Fresh press
 			if (!m_fireButtonHeldPrev)
 			{
 				if (m_pLatchedEnemyGO && !m_pLatchedEnemyGO->IsMarkedForDestroy())
@@ -108,7 +107,6 @@ namespace dae
 	{
 		CacheComponents();
 
-		// Don't process pump logic while dead — avoids animation conflicts with death sequence
 		if (m_pCollision && m_pCollision->IsDead())
 		{
 			// Still clear held state so we don't get a stale "held" on respawn
@@ -117,7 +115,7 @@ namespace dae
 			return;
 		}
 
-		// Prune enemies destroyed last frame so we never chase dangling pointers.
+		
 		// Safe here because Scene::Update() calls all object Updates before freeing marked objects.
 		m_enemies.erase(
 			std::remove_if(m_enemies.begin(), m_enemies.end(),
@@ -252,8 +250,7 @@ namespace dae
 		float cs = static_cast<float>(m_pGrid->GetCellSize());
 		auto& renderer = Renderer::GetInstance();
 
-		// Extension fraction: the sprite's full length covers (m_hoseRenderLong / cs) cells.
-		// Reveal progressively by clipping the source rect from the player-end inward.
+		
 		float spriteCellsLong = m_hoseRenderLong / cs;
 		float clampedLength = std::min(m_hoseLength, spriteCellsLong);
 		clampedLength = std::min(clampedLength, static_cast<float>(m_currentRange));
@@ -265,27 +262,23 @@ namespace dae
 		float visibleLong = m_hoseRenderLong * fraction;
 		float visibleSrcW = m_hoseSrcW * fraction;
 
-		// Source rect: native sprite extends from the player rightward, so
-		// reveal from left edge of the source. Rotation handles the visual flip.
+		
 		SDL_FRect src{ 0.f, 0.f, visibleSrcW, m_hoseSrcH };
 
-		// Player-cell anchor in screen space (the cell the player occupies).
+		// Player-cell anchor in screen space
 		float playerCx = pos.x + cs * 0.5f;
 		float playerCy = pos.y + cs * 0.5f;
 
 		// Draw the rope as a horizontal bar pinned at the player and rotated
 		// to point in the firing direction.
 		double angle = 0.0;
-		if (m_fireDirection.x > 0)      angle = 0.0;    // right
-		else if (m_fireDirection.y > 0) angle = 90.0;   // down
-		else if (m_fireDirection.x < 0) angle = 180.0;  // left
-		else if (m_fireDirection.y < 0) angle = 270.0;  // up
+		if (m_fireDirection.x > 0)      angle = 0.0;    
+		else if (m_fireDirection.y > 0) angle = 90.0;   
+		else if (m_fireDirection.x < 0) angle = 180.0;  
+		else if (m_fireDirection.y < 0) angle = 270.0;  
 
-		// Rotation pivot: the player-side end of the bar (left-middle in unrotated space).
 		SDL_FPoint pivot{ 0.f, m_hoseRenderShort * 0.5f };
 
-		// Position so that (pivot) lands on the player center, offset by a half-cell along
-		// the firing direction so the rope visually starts at the cell edge, not the middle.
 		float startOffset = cs * 0.5f;
 		float dstX = playerCx - pivot.x + static_cast<float>(m_fireDirection.x) * startOffset;
 		float dstY = playerCy - pivot.y + static_cast<float>(m_fireDirection.y) * startOffset;

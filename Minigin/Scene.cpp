@@ -29,23 +29,19 @@ void Scene::RemoveAll()
 
 void Scene::Update(float deltaTime)
 {
-	// Clean up objects that were marked for destruction in the previous frame.
-	// Deferring by one frame lets game-state code (which runs before Scene::Update)
-	// safely call IsMarkedForDestroy() to prune its own raw pointers before
-	// the objects are actually freed.
+	
 	m_Objects.erase(
 		std::remove_if(m_Objects.begin(), m_Objects.end(),
 			[](const auto& ptr) { return ptr->IsMarkedForDestroy(); }),
 		m_Objects.end());
 
-	// Update surviving objects — additions during this loop are buffered
-	// so that m_Objects isn't reallocated while we iterate it.
+	
 	m_isUpdating = true;
 	for (auto& object : m_Objects)
 		object->Update(deltaTime);
 	m_isUpdating = false;
 
-	// Flush any objects that were added during the update
+
 	for (auto& pending : m_PendingAdds)
 		m_Objects.emplace_back(std::move(pending));
 	m_PendingAdds.clear();
@@ -53,7 +49,6 @@ void Scene::Update(float deltaTime)
 
 void Scene::FixedUpdate(float fixedTimeStep)
 {
-	// Buffer additions here too — components can spawn objects during FixedUpdate
 	m_isUpdating = true;
 	for (auto& object : m_Objects)
 		object->FixedUpdate(fixedTimeStep);

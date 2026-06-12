@@ -31,12 +31,12 @@ namespace dae
 		void UnbindControllerCommand(unsigned int controllerIdx, Controller::Button button,
 			KeyState state);
 
-		// Bulk clearing — safe to call during command execution (from state transitions)
+		
 		void ClearAllBindings();
 		void ClearKeyboardBindings();
 		void ClearControllerBindings();
 
-		// Explicit teardown — releases all bindings and controllers before VLD scans
+		
 		void Shutdown();
 
 	private:

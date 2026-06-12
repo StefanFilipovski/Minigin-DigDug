@@ -8,20 +8,18 @@ namespace dae
 {
 	class AnimationSet;
 
-	// Color key shared by all Dig Dug sprite sheets (the red background)
+	// Color key shared by all Dig Dug sprite sheets
 	inline constexpr SDL_Color SpriteSheetColorKey{ 108, 7, 0, 255 };
 
-	// Type Object (Game Programming Patterns): everything that differs
-	// between enemy kinds lives in one table entry instead of code branches.
-	// Adding a new enemy kind means adding data here, not new if/else blocks.
+	// Type Object
 	struct EnemyTypeInfo
 	{
 		EnemyType type{ EnemyType::Pooka };
 		std::string walkTexture;
-		std::string fireTexture;            // empty = cannot breathe fire
+		std::string fireTexture;            
 		float moveSpeed{ 2.f };
-		bool horizontalKillBonus{ false };  // 2x score when killed from the side
-		std::shared_ptr<const AnimationSet> animations; // shared flyweight
+		bool horizontalKillBonus{ false };  
+		std::shared_ptr<const AnimationSet> animations;
 	};
 
 	// Returns the cached info for a type, building (and pre-caching textures

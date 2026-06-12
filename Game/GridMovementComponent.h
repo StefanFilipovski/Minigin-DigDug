@@ -18,7 +18,7 @@ namespace dae
 		void Update(float deltaTime) override;
 		void FixedUpdate(float fixedTimeStep) override;
 
-		// Must be called every frame the key is held (KeyState::Pressed)
+		
 		void SetDesiredDirection(const glm::ivec2& direction);
 
 		const glm::ivec2& GetGridPosition() const { return m_gridPos; }
@@ -31,7 +31,7 @@ namespace dae
 		void SetGhostMode(bool ghost) { m_isGhost = ghost; }
 		bool IsGhostMode() const { return m_isGhost; }
 
-		// Immediately stop movement and snap to current grid cell
+		
 		void SnapToCurrentCell();
 
 		void SetSpeed(float speed) { m_speed = speed; }
@@ -40,7 +40,6 @@ namespace dae
 		void SetFrozen(bool frozen) { m_frozen = frozen; }
 		bool IsFrozen() const { return m_frozen; }
 
-		// True if the player is currently moving into a cell that was dirt
 		bool IsDigging() const { return m_isDigging; }
 
 	private:

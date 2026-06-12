@@ -4,8 +4,7 @@
 
 namespace dae
 {
-	// Real sound service backed by SDL_mixer
-	// Uses pimpl so no SDL_mixer headers leak into client code
+	
 	class SDLSoundService final : public ISoundService
 	{
 	public:
@@ -19,6 +18,7 @@ namespace dae
 		void StopAllSounds() override;
 		void PlayMusic(const std::string& filePath, bool loop = true) override;
 		void StopMusic() override;
+		void SetMuted(bool muted) override;
 
 	private:
 		class Impl;

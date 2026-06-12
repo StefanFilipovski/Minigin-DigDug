@@ -8,8 +8,7 @@ namespace dae
 	class PlayerCollisionComponent;
 	class PumpComponent;
 
-	// Watches movement direction and plays the correct walk/dig/idle animation.
-	// Attach to the same GameObject as GridMovementComponent and SpriteAnimatorComponent.
+	
 	class PlayerAnimController final : public Component
 	{
 	public:

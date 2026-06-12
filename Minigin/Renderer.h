@@ -25,8 +25,8 @@ namespace dae
 		void RenderTexture(const Texture2D& texture, float x, float y,
 			const SDL_FRect& srcRect, float dstWidth, float dstHeight) const;
 
-		// Rotated draw — angle in degrees, clockwise. center is in destination space
-		// (relative to dst.x/dst.y). Pass nullptr to rotate around the destination center.
+		// Rotated draw
+		
 		void RenderTextureRotated(const Texture2D& texture, float x, float y,
 			float dstWidth, float dstHeight, double angleDegrees,
 			const SDL_FPoint* center = nullptr) const;

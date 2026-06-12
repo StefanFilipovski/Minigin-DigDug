@@ -41,8 +41,7 @@ namespace dae
 		// Rock crushes are scored via EVENT_ROCK_CRUSH_COMPLETE
 		if (enemy->WasCrushedByRock()) return;
 
-		// Pump kill — award layer-based points (Fygar horizontal bonus
-		// is already factored into GetScoreValue)
+		// Pump kill
 		int points = enemy->GetScoreValue();
 		AddPoints(points);
 
@@ -87,7 +86,7 @@ namespace dae
 		popup->AddComponent<TransformComponent>()->SetLocalPosition(x, y);
 
 		auto* text = popup->AddComponent<TextComponent>(m_popupFont, std::to_string(points));
-		text->SetColor(SDL_Color{ 0, 150, 255, 255 }); // blue
+		text->SetColor(SDL_Color{ 0, 150, 255, 255 }); 
 
 		popup->AddComponent<FloatingScoreComponent>(1.2f, 40.f);
 
@@ -107,7 +106,7 @@ namespace dae
 		case 6:  return 10000;
 		case 7:  return 12000;
 		case 8:  return 15000;
-		default: return 15000; // cap at 8+
+		default: return 15000; 
 		}
 	}
 }

@@ -17,8 +17,7 @@ namespace dae
 
 	void GridMovementComponent::Update(float /*deltaTime*/)
 	{
-		// If no input arrived this frame, clear direction. If a key is held,
-		// the input command will re-set it before the next Update.
+		
 		if (!m_inputActive)
 			m_desiredDirection = { 0, 0 };
 
@@ -56,7 +55,7 @@ namespace dae
 
 		if (!m_isMoving && m_desiredDirection != glm::ivec2{ 0, 0 })
 		{
-			// Resolve once — enemies have no pump, so cache the nullptr too
+			// Resolve once
 			if (!m_pumpCached)
 			{
 				m_pPump = GetOwner()->GetComponent<PumpComponent>();
@@ -86,7 +85,7 @@ namespace dae
 
 	void GridMovementComponent::SetDesiredDirection(const glm::ivec2& direction)
 	{
-		if (m_frozen) return; // ignore input while frozen (e.g. during death)
+		if (m_frozen) return; // ignore input while frozen
 		m_desiredDirection = direction;
 		m_inputActive = true;
 	}

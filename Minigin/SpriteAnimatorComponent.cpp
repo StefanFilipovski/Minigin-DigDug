@@ -4,7 +4,6 @@
 
 namespace dae
 {
-	// ---- AnimationSet ----
 
 	void AnimationSet::Add(const std::string& name,
 		const std::vector<SpriteFrame>& frames, float fps, bool loop)
@@ -45,7 +44,7 @@ namespace dae
 		return (it != m_animations.end()) ? &it->second : nullptr;
 	}
 
-	// ---- SpriteAnimatorComponent ----
+
 
 	SpriteAnimatorComponent::SpriteAnimatorComponent(GameObject* pOwner)
 		: Component(pOwner)

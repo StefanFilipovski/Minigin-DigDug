@@ -34,7 +34,6 @@ namespace dae
 
 		m_bindingsInvalidated = false;
 
-		// Iterate over a snapshot so a clear/rebind during Execute() is safe.
 		// Keyboard commands
 		{
 			std::vector<std::pair<KeyboardBinding, Command*>> snapshot;
@@ -125,8 +124,7 @@ namespace dae
 
 	void InputManager::ClearAllBindings()
 	{
-		// Keep old commands alive in a graveyard until the next ProcessInput,
-		// so a command that triggers this clear isn't destroyed mid-execution.
+		
 		for (auto& [key, cmd] : m_KeyboardCommands)
 			m_commandGraveyard.push_back(std::move(cmd));
 		m_KeyboardCommands.clear();

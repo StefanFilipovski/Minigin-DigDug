@@ -69,7 +69,7 @@ namespace dae
 			ScoreComponent* pScore1, ScoreComponent* pScore2);
 
 	private:
-		// Multiple "out" values returned as a struct (F.21)
+		
 		struct CreatedEnemies
 		{
 			std::vector<GameObject*> enemies;

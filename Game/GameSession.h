@@ -19,7 +19,7 @@ namespace dae
 		void SetGameMode(GameMode mode) { m_gameMode = mode; }
 		GameMode GetGameMode() const { return m_gameMode; }
 
-		// Versus winner (only meaningful in Versus mode)
+		// Versus winner
 		void SetVersusWinner(VersusWinner winner) { m_versusWinner = winner; }
 		VersusWinner GetVersusWinner() const { return m_versusWinner; }
 
@@ -44,7 +44,7 @@ namespace dae
 		// High scores
 		struct HighScoreEntry
 		{
-			std::string name;  // 3 characters, arcade style
+			std::string name; 
 			int score;
 		};
 
@@ -58,7 +58,7 @@ namespace dae
 		{
 			m_player1Score = 0;
 			m_player2Score = 0;
-			m_player1Lives = 4;  // 1 starting life + 3 extra
+			m_player1Lives = 4;  
 			m_player2Lives = 4;
 			m_currentRound = 1;
 			m_versusWinner = VersusWinner::None;

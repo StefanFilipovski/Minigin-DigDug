@@ -96,7 +96,7 @@ namespace dae
 		cell.openUp = true;
 		cell.openDown = true;
 
-		(void)moveDirection; // Will be used for partial dig visuals later
+		(void)moveDirection;
 	}
 
 	void GridComponent::SetCellType(int gridX, int gridY, CellType type)
@@ -146,7 +146,7 @@ namespace dae
 
 	int GridComponent::GetLayer(int gridY) const
 	{
-		// Surface rows are layer 1 (yellow)
+		// Surface rows are layer 1
 		if (gridY < m_surfaceRows) return 1;
 
 		// Underground rows split evenly into 4 layers

@@ -127,7 +127,7 @@ namespace dae
 		result.enemies = std::move(created.enemies);
 		result.pVersusEnemy = created.pVersusEnemy;
 
-		// Get score components before creating rocks (rocks need them for crush bonuses)
+		// Get score components before creating rocks
 		ScoreComponent* pScore1 = result.pPlayer1 ?
 			result.pPlayer1->GetComponent<ScoreComponent>() : nullptr;
 		ScoreComponent* pScore2 = result.pPlayer2 ?
@@ -142,8 +142,7 @@ namespace dae
 			pScore1, pScore2);
 		CreateHUD(scene, mode, pScore1, pScore2, result.pPlayer1, result.pPlayer2);
 
-		// Wire up collision, pump, and scoring for each player.
-		// Returns the player's score component so the caller can store it (F.21).
+		// collision, pump, and scoring for each player.
 		auto wirePlayer = [&](GameObject* pPlayer, const glm::ivec2& spawnPos) -> ScoreComponent*
 		{
 			if (!pPlayer) return nullptr;
@@ -179,8 +178,7 @@ namespace dae
 		result.pScore1 = wirePlayer(result.pPlayer1, data.playerSpawn);
 		result.pScore2 = wirePlayer(result.pPlayer2, data.player2Spawn);
 
-		// In co-op, add Player 2 as an additional target so enemies chase
-		// the closest player instead of always targeting Player 1
+		
 		if (result.pPlayer2)
 		{
 			for (auto* enemy : result.enemies)
@@ -257,7 +255,6 @@ namespace dae
 		auto* render = player->AddComponent<RenderComponent>();
 		render->SetTexture("DigDugMove1.png");
 
-		// Player sheets are 128x16: 8 frames of 16x16 (right, up, left, down x2 each)
 		constexpr int S = 16;
 		float cellSize = static_cast<float>(data.cellSize);
 
@@ -284,7 +281,6 @@ namespace dae
 		animator->AddAnimation("dig_down", digTex,
 			{ {6 * S, 0, S, S}, {7 * S, 0, S, S} }, 8.f);
 
-		// Pump uses the same regular-shovel sheet as digging (no "hole" variant)
 		const std::string pumpTex = "DigDugMoveShovel.png";
 		animator->AddAnimation("pump_right", pumpTex,
 			{ {0 * S, 0, S, S}, {1 * S, 0, S, S} }, 6.f);
@@ -295,7 +291,6 @@ namespace dae
 		animator->AddAnimation("pump_down", pumpTex,
 			{ {6 * S, 0, S, S}, {7 * S, 0, S, S} }, 6.f);
 
-		// Death animation — DigDugDie.png: 62×16, 4 frames, non-looping
 		const std::string dieTex = "DigDugDie.png";
 		animator->AddAnimation("die", dieTex,
 			{ {0, 0, S, S}, {S, 0, S, S}, {2 * S, 0, S, S}, {48, 0, 14, S} }, 4.f, false);
@@ -350,11 +345,10 @@ namespace dae
 			animator->SetAnimationSet(info.animations);
 			animator->Play("walk_right");
 
-			// canDig = false — enemies move through tunnels only
 			auto* movement = enemy->AddComponent<GridMovementComponent>(pGrid, info.moveSpeed, false);
 			movement->SetGridPosition(spawn.gridX, spawn.gridY);
 
-			// Ensure the spawn cell is passable so the enemy can move immediately
+			// the spawn cell is passable so the enemy can move immediately
 			pGrid->SetCellType(spawn.gridX, spawn.gridY, CellType::Tunnel);
 
 			bool isVersusPlayer = (mode == GameMode::Versus &&
@@ -363,8 +357,7 @@ namespace dae
 
 			if (isVersusPlayer)
 			{
-				// Versus Fygar: has EnemyComponent for fire/inflate/scoring,
-				// but is player-controlled (no AI chase logic)
+				
 				auto* enemyComp = enemy->AddComponent<EnemyComponent>(pGrid, eType, pPlayerTarget);
 				enemyComp->SetPlayerControlled(true);
 			}
@@ -429,7 +422,7 @@ namespace dae
 	{
 		auto font = ResourceManager::GetInstance().LoadFont("Lingua.otf", 18);
 
-		// Player 1 score display — observes ScoreComponent for live updates
+		// Player 1 score display
 		auto scoreGo = std::make_unique<GameObject>();
 		scoreGo->AddComponent<TransformComponent>()->SetLocalPosition(10.f, 5.f);
 		scoreGo->AddComponent<TextComponent>(font, "Score: 0");
@@ -438,7 +431,7 @@ namespace dae
 			pScore1->AddObserver(scoreDisplay);
 		scene.Add(std::move(scoreGo));
 
-		// Player 1 lives display (co-op uses a single shared counter drawn by PlayingState)
+		// Player 1 lives display
 		if (mode != GameMode::CoOp)
 		{
 			int p1Lives = 4;
@@ -477,7 +470,7 @@ namespace dae
 				pScore2->AddObserver(score2Display);
 			scene.Add(std::move(score2Go));
 
-			// Lives are shared in co-op — PlayingState draws the single counter.
+			// Lives are shared in co-op
 		}
 
 		if (mode == GameMode::Versus)
@@ -547,9 +540,7 @@ namespace dae
 			}
 		}
 
-		// Wire rock observers to new enemies
-		// (rocks don't need rewiring — they check enemies by proximity each frame)
-
+		
 		return enemies;
 	}
 }

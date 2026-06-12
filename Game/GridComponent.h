@@ -74,7 +74,7 @@ namespace dae
 		int GetLayer(int gridY) const;
 		void SetSurfaceRows(int rows) { m_surfaceRows = rows; }
 
-		// First row entities can walk on (last surface row = ground level)
+		// First row entities can walk on
 		int GetMinPlayableRow() const { return m_surfaceRows - 1; }
 
 	private:

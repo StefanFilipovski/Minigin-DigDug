@@ -18,7 +18,7 @@ namespace dae
 		void Render() const override;
 
 		GameMode GetSelectedMode() const { return m_selectedMode; }
-		void SelectMode(int direction);   // -1 = up, +1 = down
+		void SelectMode(int direction);   
 		void ConfirmSelection();
 	private:
 		void BindInput();

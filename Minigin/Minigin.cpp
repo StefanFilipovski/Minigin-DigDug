@@ -78,14 +78,13 @@ dae::Minigin::Minigin(const std::filesystem::path& dataPath, const std::string& 
 	Renderer::GetInstance().Init(g_window);
 	ResourceManager::GetInstance().Init(dataPath);
 
-	// Register the SDL sound service via the service locator
+	// Register the SDL sound service
 	ServiceLocator::RegisterSoundService(std::make_unique<SDLSoundService>());
 }
 
 dae::Minigin::~Minigin()
 {
-	// Tear down singletons here so VLD (which runs before static destructors)
-	// doesn't report their owned resources as leaks.
+	
 	GameStateManager::GetInstance().Shutdown();
 	InputManager::GetInstance().Shutdown();
 	SceneManager::GetInstance().Shutdown();

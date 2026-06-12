@@ -25,7 +25,7 @@ namespace dae
 		m_highScores.clear();
 
 		std::ifstream file(filepath);
-		if (!file.is_open()) return;  // No high scores yet, that's fine
+		if (!file.is_open()) return; 
 
 		std::string name;
 		int score;

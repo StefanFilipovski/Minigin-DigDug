@@ -15,5 +15,8 @@ namespace dae
 		// PlayMusic replaces whatever was playing. StopMusic halts it.
 		virtual void PlayMusic(const std::string& filePath, bool loop = true) = 0;
 		virtual void StopMusic() = 0;
+
+		
+		virtual void SetMuted(bool muted) = 0;
 	};
 }

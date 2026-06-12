@@ -3,7 +3,6 @@
 
 namespace dae
 {
-	// Default no-op sound service used when no real service is registered
 	class NullSoundService final : public ISoundService
 	{
 	public:
@@ -11,5 +10,6 @@ namespace dae
 		void StopAllSounds() override {}
 		void PlayMusic(const std::string&, bool) override {}
 		void StopMusic() override {}
+		void SetMuted(bool) override {}
 	};
 }

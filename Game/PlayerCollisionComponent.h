@@ -49,7 +49,7 @@ namespace dae
 			DyingAnimation,
 			BlackScreen,
 			SoftReset,
-			AwaitingRespawn   // co-op: death anim done, waiting for PlayingState
+			AwaitingRespawn  
 		};
 
 		GridComponent* m_pGrid;
@@ -65,7 +65,7 @@ namespace dae
 		DeathPhase m_deathPhase{ DeathPhase::None };
 		float m_phaseTimer{ 0.f };
 
-		static constexpr float LastFrameHold{ 0.5f };  // show last death frame briefly
+		static constexpr float LastFrameHold{ 0.5f };  
 		static constexpr float BlackScreenDuration{ 1.0f };
 
 		glm::ivec2 m_spawnPos{ 0, 0 };
