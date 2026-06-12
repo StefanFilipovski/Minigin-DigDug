@@ -23,6 +23,13 @@ namespace dae
 		NotifyObservers(EVENT_POINTS_GAINED, GetOwner());
 	}
 
+	void ScoreComponent::SetScore(int score)
+	{
+		m_Score = score;
+		// Same event as AddPoints so the points display refreshes
+		NotifyObservers(EVENT_POINTS_GAINED, GetOwner());
+	}
+
 	void ScoreComponent::Notify(EventId event, GameObject* pGameObject)
 	{
 		if (!pGameObject) return;
@@ -78,19 +85,39 @@ namespace dae
 	{
 		if (!m_pScene) return;
 
-		// Load a small font for popups if none set
 		if (!m_popupFont)
 			m_popupFont = ResourceManager::GetInstance().LoadFont("Lingua.otf", 14);
 
-		auto popup = std::make_unique<GameObject>();
-		popup->AddComponent<TransformComponent>()->SetLocalPosition(x, y);
+		// Reuse an inactive popup from the pool
+		GameObject* popup = nullptr;
+		for (auto* go : m_popupPool)
+		{
+			if (!go->GetComponent<FloatingScoreComponent>()->IsActive())
+			{
+				popup = go;
+				break;
+			}
+		}
 
-		auto* text = popup->AddComponent<TextComponent>(m_popupFont, std::to_string(points));
-		text->SetColor(SDL_Color{ 0, 150, 255, 255 }); 
+		// None free — grow the pool up to its cap, else recycle the first
+		if (!popup && m_popupPool.size() < MaxPopups)
+		{
+			auto newPopup = std::make_unique<GameObject>();
+			newPopup->AddComponent<TransformComponent>()->SetLocalPosition(-1000.f, -1000.f);
+			auto* text = newPopup->AddComponent<TextComponent>(m_popupFont, " ");
+			text->SetColor(SDL_Color{ 0, 150, 255, 255 });
+			newPopup->AddComponent<FloatingScoreComponent>(1.2f, 40.f);
 
-		popup->AddComponent<FloatingScoreComponent>(1.2f, 40.f);
+			popup = newPopup.get();
+			m_popupPool.push_back(popup);
+			m_pScene->Add(std::move(newPopup));
+		}
+		if (!popup)
+			popup = m_popupPool.front();
 
-		m_pScene->Add(std::move(popup));
+		popup->GetComponent<TransformComponent>()->SetLocalPosition(x, y);
+		popup->GetComponent<TextComponent>()->SetText(std::to_string(points));
+		popup->GetComponent<FloatingScoreComponent>()->Activate();
 	}
 
 	int ScoreComponent::GetRockCrushScore(int enemyCount)

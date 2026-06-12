@@ -1,4 +1,5 @@
 #include "PumpComponent.h"
+#include "PumpHoseComponent.h"
 #include "GridComponent.h"
 #include "GridMovementComponent.h"
 #include "SpriteAnimatorComponent.h"
@@ -20,15 +21,6 @@ namespace dae
 		: Component(pOwner)
 		, m_pGrid(pGrid)
 	{
-		// Red background gets keyed out so the rope renders cleanly
-		SDL_Color redKey{ 108, 7, 0, 255 };
-		m_hoseTexture = ResourceManager::GetInstance().LoadTexture("PumpString.png", redKey);
-
-		
-		float cs = static_cast<float>(pGrid->GetCellSize());
-		float scale = cs / 16.f;
-		m_hoseRenderLong = m_hoseSrcW * scale;
-		m_hoseRenderShort = m_hoseSrcH * scale;
 	}
 
 	void PumpComponent::CacheComponents()
@@ -235,56 +227,20 @@ namespace dae
 		// Track button state for tap vs hold detection
 		m_fireButtonHeldPrev = m_fireButtonHeld;
 		m_fireButtonHeld = false;
+
+		SyncHose();
 	}
 
-	void PumpComponent::Render() const
+	// Push the current pump state to the hose visual (a child GameObject of
+	// the player — its position follows the player via the scene graph)
+	void PumpComponent::SyncHose()
 	{
-		if (m_state == PumpState::Idle) return;
-		if (m_hoseLength <= 0.f) return;
-		if (!m_hoseTexture) return;
+		if (!m_pHose) return;
 
-		auto* transform = GetOwner()->GetComponent<TransformComponent>();
-		if (!transform) return;
-
-		const auto& pos = transform->GetWorldPosition();
-		float cs = static_cast<float>(m_pGrid->GetCellSize());
-		auto& renderer = Renderer::GetInstance();
-
-		
-		float spriteCellsLong = m_hoseRenderLong / cs;
-		float clampedLength = std::min(m_hoseLength, spriteCellsLong);
-		clampedLength = std::min(clampedLength, static_cast<float>(m_currentRange));
-
-		float fraction = clampedLength / spriteCellsLong;
-		if (fraction <= 0.f) return;
-		if (fraction > 1.f) fraction = 1.f;
-
-		float visibleLong = m_hoseRenderLong * fraction;
-		float visibleSrcW = m_hoseSrcW * fraction;
-
-		
-		SDL_FRect src{ 0.f, 0.f, visibleSrcW, m_hoseSrcH };
-
-		// Player-cell anchor in screen space
-		float playerCx = pos.x + cs * 0.5f;
-		float playerCy = pos.y + cs * 0.5f;
-
-		// Draw the rope as a horizontal bar pinned at the player and rotated
-		// to point in the firing direction.
-		double angle = 0.0;
-		if (m_fireDirection.x > 0)      angle = 0.0;    
-		else if (m_fireDirection.y > 0) angle = 90.0;   
-		else if (m_fireDirection.x < 0) angle = 180.0;  
-		else if (m_fireDirection.y < 0) angle = 270.0;  
-
-		SDL_FPoint pivot{ 0.f, m_hoseRenderShort * 0.5f };
-
-		float startOffset = cs * 0.5f;
-		float dstX = playerCx - pivot.x + static_cast<float>(m_fireDirection.x) * startOffset;
-		float dstY = playerCy - pivot.y + static_cast<float>(m_fireDirection.y) * startOffset;
-
-		renderer.RenderTextureRotated(*m_hoseTexture, dstX, dstY,
-			src, visibleLong, m_hoseRenderShort, angle, &pivot);
+		if (m_state == PumpState::Idle || m_hoseLength <= 0.f)
+			m_pHose->Hide();
+		else
+			m_pHose->Show(m_fireDirection, m_hoseLength, m_currentRange);
 	}
 
 	void PumpComponent::ForceReset()
@@ -295,6 +251,8 @@ namespace dae
 		m_fireButtonHeld = false;
 		m_fireButtonHeldPrev = false;
 		m_holdPumpTimer = 0.f;
+
+		if (m_pHose) m_pHose->Hide();
 	}
 
 	void PumpComponent::CalculateRange()

@@ -6,7 +6,8 @@ namespace dae
 	class TextComponent;
 	class TransformComponent;
 
-	// Spawns as blue score text, floats upward, then self-destructs.
+	// Blue score text that floats upward. Pooled: starts inactive, returns
+	// to the pool (deactivates) when its lifetime runs out.
 	class FloatingScoreComponent final : public Component
 	{
 	public:
@@ -14,9 +15,13 @@ namespace dae
 
 		void Update(float deltaTime) override;
 
+		void Activate();
+		bool IsActive() const { return m_active; }
+
 	private:
 		TransformComponent* m_pTransform{ nullptr };
 		bool m_cached{ false };
+		bool m_active{ false };
 
 		float m_lifetime;
 		float m_riseSpeed;

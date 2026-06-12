@@ -12,8 +12,16 @@ namespace dae
 	{
 	}
 
+	void FloatingScoreComponent::Activate()
+	{
+		m_timer = 0.f;
+		m_active = true;
+	}
+
 	void FloatingScoreComponent::Update(float deltaTime)
 	{
+		if (!m_active) return;
+
 		if (!m_cached)
 		{
 			m_pTransform = GetOwner()->GetComponent<TransformComponent>();
@@ -22,7 +30,6 @@ namespace dae
 
 		m_timer += deltaTime;
 
-		// Float upward
 		if (m_pTransform)
 		{
 			auto pos = m_pTransform->GetLocalPosition();
@@ -30,10 +37,12 @@ namespace dae
 			m_pTransform->SetLocalPosition(pos.x, pos.y);
 		}
 
-		// Self-destruct after lifetime
+		// Lifetime over — park offscreen and go back to the pool
 		if (m_timer >= m_lifetime)
 		{
-			GetOwner()->MarkForDestroy();
+			m_active = false;
+			if (m_pTransform)
+				m_pTransform->SetLocalPosition(-1000.f, -1000.f);
 		}
 	}
 }

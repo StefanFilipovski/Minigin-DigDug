@@ -3,6 +3,7 @@
 #include "Subject.h"
 #include "Observer.h"
 #include <memory>
+#include <vector>
 
 namespace dae
 {
@@ -17,6 +18,10 @@ namespace dae
 		void AddPoints(int points);
 		int  GetScore() const { return m_Score; }
 
+		// Restore a score carried over from the previous level (players are
+		// rebuilt on level load, so the running total lives in GameSession)
+		void SetScore(int score);
+
 		// Set the scene used to spawn floating score popups
 		void SetScene(Scene* pScene) { m_pScene = pScene; }
 		void SetPopupFont(std::shared_ptr<Font> font) { m_popupFont = font; }
@@ -29,6 +34,11 @@ namespace dae
 		int m_Score{ 0 };
 		Scene* m_pScene{ nullptr };
 		std::shared_ptr<Font> m_popupFont;
+
+		// Object pool for score popups — popups deactivate instead of being
+		// destroyed, and spawning reuses an inactive one
+		static constexpr size_t MaxPopups{ 8 };
+		std::vector<GameObject*> m_popupPool;
 
 		void SpawnScorePopup(int points, float x, float y);
 		void HandleEnemyKilled(GameObject* pEnemyGO);

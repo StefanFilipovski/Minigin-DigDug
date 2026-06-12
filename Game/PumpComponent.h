@@ -13,7 +13,7 @@ namespace dae
 	class EnemyComponent;
 	class PlayerCollisionComponent;
 	class RenderComponent;
-	class Texture2D;
+	class PumpHoseComponent;
 	class GameObject;
 
 	class PumpComponent final : public Component
@@ -22,7 +22,9 @@ namespace dae
 		PumpComponent(GameObject* pOwner, GridComponent* pGrid);
 
 		void Update(float deltaTime) override;
-		void Render() const override;
+
+		// The hose visual lives on a child GameObject of the player
+		void SetHose(PumpHoseComponent* pHose) { m_pHose = pHose; }
 
 		// Called by the pump command
 		void Fire();
@@ -67,20 +69,15 @@ namespace dae
 		static constexpr float RetractDelay{ 0.15f };
 
 		// Hold-to-pump
-		bool  m_fireButtonHeld{ false };      
-		bool  m_fireButtonHeldPrev{ false };  
-		float m_holdPumpTimer{ 0.f };         
-		static constexpr float HoldPumpInterval{ 0.4f };  
+		bool  m_fireButtonHeld{ false };
+		bool  m_fireButtonHeldPrev{ false };
+		float m_holdPumpTimer{ 0.f };
+		static constexpr float HoldPumpInterval{ 0.4f };
 
-		
-		
-		std::shared_ptr<Texture2D> m_hoseTexture;
-		float m_hoseSrcW{ 32.f }; 
-		float m_hoseSrcH{ 6.f };  
-		float m_hoseRenderLong{ 32.f };  
-		float m_hoseRenderShort{ 6.f };  
+		PumpHoseComponent* m_pHose{ nullptr };
 
 		void CalculateRange();
 		void CacheComponents();
+		void SyncHose();
 	};
 }

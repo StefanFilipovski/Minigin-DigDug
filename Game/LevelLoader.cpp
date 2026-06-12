@@ -4,6 +4,7 @@
 #include "SpriteAnimatorComponent.h"
 #include "PlayerAnimController.h"
 #include "PumpComponent.h"
+#include "PumpHoseComponent.h"
 #include "EnemyComponent.h"
 #include "EnemyTypeInfo.h"
 #include "PlayerCollisionComponent.h"
@@ -304,7 +305,7 @@ namespace dae
 		auto* movement = player->AddComponent<GridMovementComponent>(pGrid, 4.f, true);
 		movement->SetGridPosition(spawnGrid.x, spawnGrid.y);
 
-		player->AddComponent<PumpComponent>(pGrid);
+		auto* pump = player->AddComponent<PumpComponent>(pGrid);
 		player->AddComponent<ScoreComponent>();
 
 		// Enemies are registered into this component after they're created
@@ -312,6 +313,19 @@ namespace dae
 
 		GameObject* ptr = player.get();
 		scene.Add(std::move(player));
+
+		// The hose visual is a child of the player in the scene graph: it has
+		// local position {0,0} and inherits the player's world position, so it
+		// follows him with no manual syncing. The scene still owns it (the
+		// scene updates/renders a flat list; parenting only links transforms).
+		auto hose = std::make_unique<GameObject>();
+		hose->AddComponent<TransformComponent>()->SetLocalPosition(0.f, 0.f);
+		auto* hoseComp = hose->AddComponent<PumpHoseComponent>(pGrid);
+		GameObject* hosePtr = hose.get();
+		scene.Add(std::move(hose));
+		hosePtr->SetParent(ptr, false);
+		pump->SetHose(hoseComp);
+
 		return ptr;
 	}
 

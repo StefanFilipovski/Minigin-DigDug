@@ -409,3 +409,5 @@ imgui.ini
 steamworks_sdk_*/
 
 .DS_Store
+# Runtime-generated high score save
+Data/highscores.txt

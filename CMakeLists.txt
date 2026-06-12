@@ -244,6 +244,7 @@ add_executable(DigDug
   Game/EnemyStates.cpp
   Game/EnemyTypeInfo.cpp
   Game/PumpComponent.cpp
+  Game/PumpHoseComponent.cpp
   Game/RockComponent.cpp
   Game/HealthComponent.cpp
   Game/ScoreComponent.cpp

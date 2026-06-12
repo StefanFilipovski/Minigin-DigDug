@@ -247,6 +247,15 @@ namespace dae
 			// Wire death callbacks on both players' collision components
 			WirePlayerCallbacks();
 
+			// Players (and their ScoreComponents) are rebuilt from scratch each
+			// level — restore the running totals saved in the session so the
+			// score persists across levels in every mode.
+			auto& session = GameSession::GetInstance();
+			if (m_buildResult.pScore1)
+				m_buildResult.pScore1->SetScore(session.GetPlayer1Score());
+			if (m_buildResult.pScore2)
+				m_buildResult.pScore2->SetScore(session.GetPlayer2Score());
+
 			
 			if (m_gameMode == GameMode::Versus)
 			{
@@ -747,6 +756,9 @@ namespace dae
 
 	void PlayingState::SkipLevel()
 	{
+		// Keep the points earned this level — same as a normal level advance
+		SaveScoresToSession();
+
 		++m_currentRound;
 		if (m_currentRound > m_totalRounds)
 		{
